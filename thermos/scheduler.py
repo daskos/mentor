@@ -4,6 +4,7 @@ from collections import deque
 from threading import Thread
 from event_handlers import resource_offer_handler, status_update_handler
 from skeleton import Skeleton, create_driver_method
+import os
 
 
 class ThermosScheduler(Scheduler, Skeleton):
@@ -27,8 +28,21 @@ def create_framework(config):
     return framework
 
 
+def create_task_executor(config):
+    executor = mesos_pb2.ExecutorInfo()
+    executor.name = name
+    executor.executor_id.value = name
+    executor.command.value = 'python %s' % config['executor_dir']
+
+    uri = executor.command.uris.add()
+    uri.value = os.path.join(config['executor_dir'], config.get('executor_file', 'executor.py'))
+    uri.extract = False
+
+    return executor
+
+
 def create_scheduler(config, executor_message_handler):
-    scheduler = ThermosScheduler(config=config)
+    scheduler = ThermosScheduler(config=config, create_task_executor(config))
     scheduler.add_handler('framework_message', executor_message_handler)
     scheduler.add_handler('resource_offers', resource_offer_handler)
     scheduler.add_handler('status_update', status_update_handler)
@@ -36,5 +50,5 @@ def create_scheduler(config, executor_message_handler):
 
 
 def run_scheduler(scheduler):
-    framework_thread = Thread(target=run_driver_async, args=())
+    framework_thread = Thread(target=create_driver_method(scheduler), args=())
     framework_thread.start()

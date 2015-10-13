@@ -41,7 +41,7 @@ def resource_offers(self, driver, offers):
         for offer in offers:
             if not task_queue or self.task_stats['running'] >= self.config['max_tasks']:
                 print 'Declining offer [%s]' % offer.id
-                driver.declineOffer(offer.id, self.filter)
+                driver.declineOffer(offer.id, fltr)
                 continue
 
             resources = get_resources_from_offer(offer)
@@ -53,7 +53,7 @@ def resource_offers(self, driver, offers):
                 places -= 1
 
             print 'We\'re starting %d new task(s)' % len(tasks)
-            driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(offer.id, self.filter)
+            driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(offer.id, fltr)
 
         t = threading.Thread(target=handle_offers)
         t.start()

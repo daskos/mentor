@@ -12,16 +12,25 @@ class Skeleton(object):
         Also note that this will run on every access for non-existent attributes
         so be careful w/ it.
         """
+
+        print 'Tried to access member method [%s]' % name
+
         def handler(*args, **kwargs):
             print 'Event [%s] triggered (%s) (%s)' % (name, args, kwargs)
 
         return handler
+
+    #def __getattribute__(self, name):
+        #print '[[[[[[ %s ]]]]]]' % name
+        #return object.__getattribute__(self, name)
 
     def add_handler(self, name, method):
         if name not in self.ALLOWED_HANDLERS:
             raise ValueError('You are not allowed to set such a handler: %s' % name)
 
         self.__dict__[name] = types.MethodType(method, self)
+        self.__dict__[name.title().replace('_', '')] = types.MethodType(method, self) # yo, bitch! :'(
+        print 'Handler added [%s]' % name
 
 
 def create_driver_method(driver):

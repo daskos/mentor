@@ -39,6 +39,7 @@ def resource_offer_handler(self, driver, offers):
         return task
 
     def handle_offers():
+        self.shutdown_if_done(driver)
         for offer in offers:
             if not self.task_queue or self.task_stats['running'] >= self.config['max_tasks']:
                 print 'Declining offer [%s]' % offer.id
@@ -61,17 +62,18 @@ def resource_offer_handler(self, driver, offers):
 
 
 def status_update_handler(self, driver, taskStatus):
-    status = int(taskStatus.task_id.value)
+    status = taskStatus.state
     print 'Recieved a status update [%s]' % status
-    if status == mesos_pb2.TASK_RUNNING:
+
+    if status == mesos_pb2.TASK_RUNNING: # 1
         self.task_stats['running'] += 1
-    elif status == mesos_pb2.TASK_FINISHED:
+    elif status == mesos_pb2.TASK_FINISHED: # 2
         self.task_stats['running'] -= 1
         self.task_stats['successful'] += 1
-    elif status in [mesos_pb2.TASK_FAILED, mesos_pb2.TASK_LOST, mesos_pb2.TASK_KILLED]:
+    elif status in [mesos_pb2.TASK_FAILED, mesos_pb2.TASK_LOST, mesos_pb2.TASK_KILLED]: # 3, 5, 4
         self.task_stats['running'] -= 1
         self.task_stats['failed'] += 1
-    elif status in [mesos_pb2.TASK_STAGING, mesos_pb2.TASK_STARTING]:
+    elif status in [mesos_pb2.TASK_STAGING, mesos_pb2.TASK_STARTING]: # 6, 0
         return
     else:
         print 'Unknown state code [%s]' % status

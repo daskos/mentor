@@ -21,6 +21,11 @@ class ThermosScheduler(Scheduler, Skeleton):
         self.name = config['name']
         self.task_queue = deque()
 
+    def shutdown_if_done(self, driver):
+        if not any((self.driver_states['is_starting'], self.task_stats['running'], len(self.task_queue))):
+            print 'We are finished.'
+            driver.stop()
+
 
 def create_framework(config):
     framework = mesos_pb2.FrameworkInfo()

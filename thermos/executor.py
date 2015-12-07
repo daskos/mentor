@@ -1,7 +1,7 @@
 from mesos.interface import Executor, mesos_pb2
 from mesos.native import MesosExecutorDriver
 from skeleton import Skeleton, create_driver_method
-import sys, threading
+import threading
 
 
 class ThermosExecutor(Executor, Skeleton):

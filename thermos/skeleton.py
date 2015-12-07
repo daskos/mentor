@@ -1,4 +1,5 @@
-import types
+from mesos.interface import mesos_pb2
+import types, sys
 
 
 class Skeleton(object):

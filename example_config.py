@@ -1,7 +1,7 @@
 # example config
 config = {
-    'id': 'thermos',
-    'name': 'Thermos',
+    'id': 'satyr',
+    'name': 'Satyr',
     'resources': {'cpus': 1, 'mem': 512},
     'max_tasks': 10,
     'master': '',

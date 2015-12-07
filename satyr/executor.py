@@ -4,7 +4,7 @@ from skeleton import Skeleton, create_driver_method
 import threading
 
 
-class ThermosExecutor(Executor, Skeleton):
+class SatyrExecutor(Executor, Skeleton):
     ALLOWED_HANDLERS = ['runTask']
 
     def launchTask(self, driver, task):
@@ -26,7 +26,7 @@ class ThermosExecutor(Executor, Skeleton):
 
 
 def create_executor(run_task_handler):
-    executor = ThermosExecutor()
+    executor = SatyrExecutor()
     executor.add_handler('runTask', run_task_handler)
     return MesosExecutorDriver(executor)
 

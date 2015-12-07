@@ -1,14 +1,14 @@
-from thermos import scheduler
+from satyr import scheduler
 import os
 
 config = {
-    'id': 'thermos',
-    'name': 'Thermos',
+    'id': 'satyr',
+    'name': 'Satyr',
     'resources': {'cpus': 0.1, 'mem': 128},
     'max_tasks': 10,
     'master': '127.0.1.1:5050',
     'user': 'root',
-    'executor_dir': '/rnd/thermos/',
+    'executor_dir': '/rnd/satyr/',
     'executor_file': 'example_executor.py'
 }
 

@@ -7,10 +7,10 @@ from skeleton import Skeleton, create_driver_method
 import os
 
 
-class ThermosScheduler(Scheduler, Skeleton):
+class SatyrScheduler(Scheduler, Skeleton):
     ALLOWED_HANDLERS = ['resourceOffers', 'statusUpdate', 'frameworkMessage']
 
-    config = {'resources': {'cpus': 1, 'mem': 512}, 'max_tasks': 10, 'name': 'Thermos'}
+    config = {'resources': {'cpus': 1, 'mem': 512}, 'max_tasks': 10, 'name': 'Satyr'}
     task_stats = {'running': 0, 'successful': 0, 'failed': 0, 'created': 0}
     driver_states = {'is_starting': True}
 
@@ -50,7 +50,7 @@ def create_task_executor(config):
 
 
 def create_scheduler(config, executor_message_handler, task='message'):
-    scheduler = ThermosScheduler(config, create_task_executor(config))
+    scheduler = SatyrScheduler(config, create_task_executor(config))
     scheduler.add_handler('frameworkMessage', executor_message_handler)
     scheduler.add_handler('resourceOffers', resource_offer_handler)
     scheduler.add_handler('statusUpdate', status_update_handler)

@@ -1,4 +1,4 @@
-from thermos import executor
+from satyr import executor
 from mesos.interface import mesos_pb2
 import time
 

@@ -21,6 +21,9 @@ class SatyrScheduler(Scheduler, Skeleton):
         self.name = config['name']
         self.task_queue = deque()
 
+    def add_job(self, message):
+        self.task_queue.append(message)
+
     def shutdown_if_done(self, driver):
         if not any((self.driver_states['is_starting'], self.task_stats['running'], len(self.task_queue))):
             print 'We are finished.'
@@ -49,12 +52,15 @@ def create_task_executor(config):
     return executor
 
 
-def create_scheduler(config, executor_message_handler, task='message'):
+def create_scheduler(config, executor_message_handler, job=None):
     scheduler = SatyrScheduler(config, create_task_executor(config))
     scheduler.add_handler('frameworkMessage', executor_message_handler)
     scheduler.add_handler('resourceOffers', resource_offer_handler)
     scheduler.add_handler('statusUpdate', status_update_handler)
-    scheduler.task_queue.append(task)
+
+    if not job is None:
+        scheduler.add_job(job)
+
     return MesosSchedulerDriver(scheduler, create_framework(config), config['master'])
 
 

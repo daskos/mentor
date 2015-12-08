@@ -14,7 +14,7 @@ config = {
 
 def handler(self, driver, executorId, slaveId, message):
     print message
-    #self.task_queue.append('message')
+    # To add more jobs: self.add_job('message')
 
-echoer = scheduler.create_scheduler(config, handler)
+echoer = scheduler.create_scheduler(config, handler, 'Initial job')
 scheduler.run_scheduler(echoer)

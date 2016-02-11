@@ -7,7 +7,7 @@ fltr.refuse_seconds = 300
 
 
 def resource_offer_handler(self, driver, offers):
-    print 'Recieved %d resource offers' % len(offers)
+    print 'Recieved %d resource offer(s)' % len(offers)
 
     def get_resources_from_offer(offer):
         return {res.name: res.scalar.value for res in offer.resources}

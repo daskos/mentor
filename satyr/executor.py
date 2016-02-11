@@ -9,7 +9,7 @@ class SatyrExecutor(Executor, Skeleton):
 
     def launchTask(self, driver, task):
         thread = threading.Thread(target=self.runTask, args=(driver, task))
-        #thread.daemon = True
+        thread.daemon = True
         thread.start()
 
     def create_status_update(self, task, state):

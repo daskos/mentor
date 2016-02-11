@@ -43,7 +43,7 @@ def create_task_executor(config):
     executor = mesos_pb2.ExecutorInfo()
     executor.name = config['name']
     executor.executor_id.value = config['id']
-    executor.command.value = 'python %s' % path
+    executor.command.value = 'python %s' % config.get('executor_file', 'executor.py')
 
     uri = executor.command.uris.add()
     uri.value = path

@@ -21,10 +21,6 @@ class Skeleton(object):
 
         return handler
 
-    #def __getattribute__(self, name):
-        #print '[[[[[[ %s ]]]]]]' % name
-        #return object.__getattribute__(self, name)
-
     def add_handler(self, name, method):
         if name not in self.ALLOWED_HANDLERS:
             raise ValueError('You are not allowed to set such a handler: %s' % name)

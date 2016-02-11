@@ -13,4 +13,5 @@ A Mesos framework library for python 2.7 (no 3+ support yet).
  - [ ] executor in container
  - [ ] tests
  - [ ] dynamic resource allocation
+ - [ ] constraint matching
  - [ ] use GitHub issues

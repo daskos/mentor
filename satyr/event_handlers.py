@@ -47,10 +47,10 @@ def resource_offer_handler(self, driver, offers):
                 continue
 
             resources = get_resources_from_offer(offer)
-            places = calculate_available_places(resources)
+            places = min(self.config['max_tasks'] - self.task_stats['running'], calculate_available_places(resources))
 
             tasks = []
-            while self.task_queue and min(self.config['max_tasks'] - self.task_stats['running'], places) > 0:
+            while self.task_queue and places > 0:
                 tasks.append(create_task(offer, self.task_queue.popleft()))
                 places -= 1
 

@@ -8,10 +8,11 @@ A Mesos framework library for python 2.7 (no 3+ support yet).
  - [ ] retry
  - [x] request resource
  - [x] init/first task/add task/etc
- - [ ] usage example
+ - [x] usage example
  - [ ] add license
  - [ ] executor in container
  - [ ] tests
  - [ ] dynamic resource allocation
  - [ ] constraint matching
+ - [x] stay alive w/ empty queue
  - [ ] use GitHub issues

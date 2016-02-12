@@ -8,7 +8,7 @@ config = {
     'name': 'Satyr',
     'resources': {'cpus': 0.1, 'mem': 128},
     'max_tasks': 10,
-    'master': '192.168.1.127:5050',
+    'master': '192.168.1.103:5050',
     'user': 'nagyz',
     'executor_dir': os.path.dirname(os.path.realpath(__file__)),
     'executor_file': 'example.py'

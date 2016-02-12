@@ -25,9 +25,16 @@ class SatyrScheduler(Scheduler, Skeleton):
         self.task_queue.append(message)
 
     def shutdown_if_done(self, driver):
-        if not any((self.driver_states['is_starting'], self.task_stats['running'], len(self.task_queue))):
+        if not any((
+                self.config.get('permanent'),
+                self.driver_states['is_starting'],
+                self.task_stats['running'],
+                len(self.task_queue))):
             print 'We are finished.'
-            driver.stop()
+            self.force_shutdown()
+
+    def force_shutdown(self):
+        driver.stop()
 
 
 def create_framework(config):
@@ -43,7 +50,7 @@ def create_task_executor(config):
     executor = mesos_pb2.ExecutorInfo()
     executor.name = config['name']
     executor.executor_id.value = config['id']
-    executor.command.value = 'python %s' % config.get('executor_file', 'executor.py')
+    executor.command.value = config.get('command') or 'python %s' % config.get('executor_file', 'executor.py')
 
     uri = executor.command.uris.add()
     uri.value = path
@@ -61,9 +68,10 @@ def create_scheduler(config, executor_message_handler, job=None):
     if not job is None:
         scheduler.add_job(job)
 
-    return MesosSchedulerDriver(scheduler, create_framework(config), config['master'])
+    return scheduler
 
 
 def run_scheduler(scheduler):
-    framework_thread = Thread(target=create_driver_method(scheduler), args=())
+    driver = MesosSchedulerDriver(scheduler, create_framework(scheduler.config), scheduler.config['master'])
+    framework_thread = Thread(target=create_driver_method(driver), args=())
     framework_thread.start()

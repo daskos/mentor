@@ -33,4 +33,4 @@ def create_executor(run_task_handler):
 
 def run_executor(executor):
     method = create_driver_method(executor)
-    method()
+    return method()

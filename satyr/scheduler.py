@@ -12,7 +12,7 @@ class SatyrScheduler(Scheduler, Skeleton):
 
     config = {'resources': {'cpus': 1, 'mem': 512}, 'max_tasks': 10, 'name': 'Satyr'}
     task_stats = {'running': 0, 'successful': 0, 'failed': 0, 'created': 0}
-    driver_states = {'is_starting': True}
+    driver_states = {'is_starting': True, 'force_shutdown': False, 'is_running': True}
 
     def __init__(self, config, task_executor):
         print 'Starting framework [%s]' % config['name']
@@ -26,15 +26,16 @@ class SatyrScheduler(Scheduler, Skeleton):
 
     def shutdown_if_done(self, driver):
         if not any((
+                not self.driver_states['force_shutdown'],
                 self.config.get('permanent'),
                 self.driver_states['is_starting'],
                 self.task_stats['running'],
                 len(self.task_queue))):
             print 'We are finished.'
-            self.force_shutdown()
 
-    def force_shutdown(self):
+    def shutdown(self, driver):
         driver.stop()
+        self.driver_states['is_running'] = False
 
 
 def create_framework(config):
@@ -75,3 +76,4 @@ def run_scheduler(scheduler):
     driver = MesosSchedulerDriver(scheduler, create_framework(scheduler.config), scheduler.config['master'])
     framework_thread = Thread(target=create_driver_method(driver), args=())
     framework_thread.start()
+    return framework_thread

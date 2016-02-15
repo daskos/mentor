@@ -3,9 +3,6 @@ from satyr import executor
 import json, cloudpickle
 
 
-"""
-Something like this should pickled into the task:
-"""
 def create_pickled_executor():
     def pickled_function_handler(self, driver, task):
         self.send_status_update(driver, task, mesos_pb2.TASK_RUNNING)
@@ -24,6 +21,3 @@ def create_pickled_executor():
 if __name__ == '__main__':
     pickled_executor = create_pickled_executor()
     executor.run_executor(pickled_executor)
-
-
-

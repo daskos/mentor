@@ -25,13 +25,13 @@ class SatyrScheduler(Scheduler, Skeleton):
         self.task_queue.append(message)
 
     def shutdown_if_done(self, driver):
-        if not any((
-                not self.driver_states['force_shutdown'],
+        if self.driver_states['force_shutdown'] or not any((
                 self.config.get('permanent'),
                 self.driver_states['is_starting'],
                 self.task_stats['running'],
                 len(self.task_queue))):
             print 'We are finished.'
+            self.shutdown(driver)
 
     def shutdown(self, driver):
         driver.stop()

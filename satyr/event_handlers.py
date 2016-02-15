@@ -32,7 +32,7 @@ def resource_offer_handler(self, driver, offers):
         task.slave_id.value = offer.slave_id.value
         task.name = '%s %s' % (self.name, task.task_id.value)
         task.executor.MergeFrom(self.task_executor)
-        task.data = data
+        task.data = data.get('msg', '') if isinstance(data, dict) else data
 
         for name, val in create_task_resources(data).items():
             add_resource(task, name, val)

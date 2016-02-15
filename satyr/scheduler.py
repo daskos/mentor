@@ -1,9 +1,9 @@
 from mesos.interface import Scheduler, mesos_pb2
 from mesos.native import MesosSchedulerDriver
-from collections import deque
 from threading import Thread
-from event_handlers import resource_offer_handler, status_update_handler
-from skeleton import Skeleton, create_driver_method
+from .event_handlers import resource_offer_handler, status_update_handler
+from .skeleton import Skeleton, create_driver_method
+from .queue import Queue
 import os
 
 
@@ -19,7 +19,7 @@ class SatyrScheduler(Scheduler, Skeleton):
         self.config.update(config)
         self.task_executor = task_executor
         self.name = config['name']
-        self.task_queue = deque()
+        self.task_queue = Queue()
 
     def add_job(self, message):
         self.task_queue.append(message)
@@ -60,9 +60,10 @@ def create_task_executor(config):
     return executor
 
 
-def create_scheduler(config, executor_message_handler, job=None):
+def create_scheduler(config, executor_message_handler=None, job=None):
     scheduler = SatyrScheduler(config, create_task_executor(config))
-    scheduler.add_handler('frameworkMessage', executor_message_handler)
+    if executor_message_handler:
+        scheduler.add_handler('frameworkMessage', executor_message_handler)
     scheduler.add_handler('resourceOffers', resource_offer_handler)
     scheduler.add_handler('statusUpdate', status_update_handler)
 

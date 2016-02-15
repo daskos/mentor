@@ -7,10 +7,9 @@ def create_pickled_executor():
     def pickled_function_handler(self, driver, task):
         self.send_status_update(driver, task, mesos_pb2.TASK_RUNNING)
 
-        func = cloudpickle.loads(task.data)
-
         self.send_framework_message(driver, 'Running pickled function.')
-        func()
+        job = cloudpickle.loads(task.data)
+        job['func'](*job['args'], **job['kwargs'])
         self.send_framework_message(driver, 'Done!')
 
         self.send_status_update(driver, task, mesos_pb2.TASK_FINISHED)

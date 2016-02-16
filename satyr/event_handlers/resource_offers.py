@@ -1,6 +1,8 @@
 from mesos.interface import mesos_pb2
 import threading
 
+from ..mesos_pb2_factory import build
+
 # TODO u can't b serious
 fltr = mesos_pb2.Filters()
 fltr.refuse_seconds = 300
@@ -64,14 +66,7 @@ class ResourceOfferHandler(object):
 
     def create_task(self, offer, data):
         self.scheduler.task_stats['created'] += 1
-
-        task = mesos_pb2.TaskInfo()
-        task.task_id.value = str(data.pop('id', self.scheduler.task_stats['created']).zfill(5))
-        task.slave_id.value = offer.slave_id.value
-        task.name = '%s %s' % (self.scheduler.name, task.task_id.value)
-        task.executor.MergeFrom(self.scheduler.task_executor)
-        task.data = data.get('msg', '') if isinstance(data, dict) else data
-
+        task = build('task_info', data, self.scheduler, offer)
         self.add_resources_to_task(task, data)
 
         return task

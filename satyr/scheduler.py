@@ -1,11 +1,13 @@
-from mesos.interface import Scheduler, mesos_pb2
+from mesos.interface import Scheduler
 from mesos.native import MesosSchedulerDriver
 from threading import Thread
+import os
+
 from .event_handlers import ResourceOfferHandler, StatusUpdateHandler
 from .skeleton import Skeleton, create_driver_method
 from .queue import Queue
 from .config import default as default_config
-import os
+from .mesos_pb2_factory import build
 
 
 class SatyrScheduler(Scheduler, Skeleton):
@@ -42,23 +44,10 @@ class SatyrScheduler(Scheduler, Skeleton):
         self.driver_states['is_running'] = False
 
 
-def create_framework(config):
-    framework = mesos_pb2.FrameworkInfo()
-    framework.user = config.get('user', '')
-    framework.name = config['name']
-    return framework
-
-
 def create_task_executor(config):
-    path = os.path.join(config['executor_dir'], config.get('executor_file', 'executor.py'))
-
-    executor = mesos_pb2.ExecutorInfo()
-    executor.name = config['name']
-    executor.executor_id.value = config['id']
-    executor.command.value = config.get('command') or 'python %s' % config.get('executor_file', 'executor.py')
-
+    executor = build('executor_info', config)
     uri = executor.command.uris.add()
-    uri.value = path
+    uri.value = os.path.join(config['executor_dir'], config['executor_file'])
     uri.extract = False
 
     return executor
@@ -78,7 +67,7 @@ def create_scheduler(config, executor_message_handler=None, job=None):
 
 
 def run_scheduler(scheduler):
-    driver = MesosSchedulerDriver(scheduler, create_framework(scheduler.config), scheduler.config['master'])
+    driver = MesosSchedulerDriver(scheduler, build('framework_info', scheduler.config), scheduler.config['master'])
     framework_thread = Thread(target=create_driver_method(driver), args=())
     framework_thread.start()
     return framework_thread

@@ -27,4 +27,9 @@ def build(name, *args, **kwargs):
         task.data = data.get('msg', '') if isinstance(data, dict) else data
         return task
 
+    def filters(config):
+        filters = mesos_pb2.Filters()
+        filters.refuse_seconds = config.get('filter_refuse_seconds', 300)
+        return filters
+
     return locals().get(name)(*args, **kwargs)

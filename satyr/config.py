@@ -6,10 +6,11 @@ default = {
     'name': 'Satyr',
     'resources': {'cpus': 0.1, 'mem': 128},
     'max_tasks': 1,
-    'master': '192.168.1.103:5050',
+    'master': '192.168.1.127:5050',
     'user': 'root',
     'executor_dir': os.path.dirname(pickled_executor.__file__),
     'executor_file': 'pickled.py',
     'command': 'python pickled.py',
-    'permanent': False
+    'permanent': False,
+    'filter_refuse_seconds': 300
 }

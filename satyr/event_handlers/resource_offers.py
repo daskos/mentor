@@ -3,10 +3,6 @@ import threading
 
 from ..mesos_pb2_factory import build
 
-# TODO u can't b serious
-fltr = mesos_pb2.Filters()
-fltr.refuse_seconds = 300
-
 
 class ResourceOfferHandler(object):
     """Handles resource offer calls and creates new
@@ -14,6 +10,7 @@ class ResourceOfferHandler(object):
 
     def __init__(self, scheduler):
         self.scheduler = scheduler
+        self.filters = build('filters', self.scheduler.config)
 
     def __call__(self, scheduler, driver, offers):
         """An offer should not block the scheduler so we try to
@@ -28,13 +25,13 @@ class ResourceOfferHandler(object):
         for offer in offers:
             if not self.scheduler.should_be_running():
                 print 'Declining offer [%s]' % offer.id
-                driver.declineOffer(offer.id, fltr)
+                driver.declineOffer(offer.id, self.filters)
                 continue
 
             tasks = [self.create_task(offer, task) for task in self.create_task_list(self.get_resources_from_offer(offer), [])]
 
             print 'We\'re starting %d new task(s)' % len(tasks)
-            driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(offer.id, fltr)
+            driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(offer.id, self.filters)
 
     def get_resources_from_offer(self, offer):
         return {res.name: res.scalar.value for res in offer.resources}

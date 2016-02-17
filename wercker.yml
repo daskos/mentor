@@ -6,7 +6,7 @@
 # If you want Google's container you would reference google/python
 # Read more about containers on our dev center
 # http://devcenter.wercker.com/docs/containers/index.html
-box: ipython/scipystack
+box: python:2.7-slim
 # You can also use services such as databases. Read more on our dev center:
 # http://devcenter.wercker.com/docs/services/index.html
 # services:
@@ -19,6 +19,14 @@ box: ipython/scipystack
 # This is the build pipeline. Pipelines are the core of wercker
 # Read more about pipelines on our dev center
 # http://devcenter.wercker.com/docs/pipelines/index.html
+
+dev:
+  steps:
+    - script:
+        name: pip install
+        code: |
+          pip install .
+
 build:
   # The steps that will be executed on build
   # Steps make up the actions in your pipeline
@@ -26,15 +34,11 @@ build:
   # http://devcenter.wercker.com/docs/steps/index.html
   steps:
     # A step that executes `pip install` command.
-    #- pip-install
     - script:
-        name: 'test'
+        name: pip install
         code: |
-          python setup.py test
-    # # This pip-install clears the local wheel cache
-    # - pip-install:
-    #     clean_wheel_dir: true
-
+          pip install .
+    
     # A custom script step, name value is used in the UI
     # and the code value contains the command that get executed
     - script:
@@ -42,8 +46,3 @@ build:
         code: |
           echo "python version $(python --version) running"
           echo "pip version $(pip --version) running"
-
-    - script:
-        name: python unit test
-        code: |
-          python -m pytest

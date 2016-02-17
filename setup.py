@@ -2,7 +2,7 @@
 
 from os.path import exists
 from setuptools import setup
-import debas
+
 
 setup(name='Satyr',
       version='0.1',
@@ -16,6 +16,7 @@ setup(name='Satyr',
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
       install_requires=[],
+      extras_require={'mesos': ['mesos.native']},
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],
       zip_safe=False)

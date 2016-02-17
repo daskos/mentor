@@ -46,6 +46,7 @@ def create_satyr(config):
         result = cloudpickle.loads(message)
         if result.get('response', False) and sched.satyr:
             sched.satyr.results[result['id']] = result['msg']
+            sched.satyr.async_results[result['id']].flags += (SatyrAsyncResult.FLAG_READY,)
 
     config = dict(default_config, **config)
     sched  = scheduler.create_scheduler(config, store_result)
@@ -64,10 +65,12 @@ class SatyrAsyncResult(AsyncResult):
 
     def get(self, timeout=None):
         self.wait(timeout)
-        return self.satyr.results.pop(self.task['id'], {})
+        return self.satyr.results.get(self.task['id'], None)
 
     def wait(self, timeout=None):
-        while not self.ready(): sleep(1)
+        while not self.ready():
+            sleep(1)
+            print '[%s] Waiting to get ready...' % self.task['id']
 
     def ready(self):
         return self.FLAG_READY in self.flags
@@ -77,4 +80,4 @@ class SatyrAsyncResult(AsyncResult):
 
     def update_status(self, task, is_successful):
         if not self.task['id'] == task.task_id.value: return
-        self.flags = (self.FLAG_READY, self.FLAG_SUCCESSFUL) if is_successful else (self.FLAG_READY,)
+        self.flags = self.flags + (self.FLAG_SUCCESSFUL,) if is_successful else self.flags

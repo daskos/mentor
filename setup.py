@@ -1,12 +1,21 @@
-from distutils.core import setup
+#!/usr/bin/env python
 
-setup(
-    name='Satyr',
-    version='0.0.1',
-    author='Zoltan Nagy',
-    author_email='zoltan.nagy@lensa.com',
-    packages=['satyr'],
-    license='LICENSE.txt',
-    description='A Mesos framework library for python 2.7.',
-    install_requires=[]
-)
+from os.path import exists
+from setuptools import setup
+import debas
+
+setup(name='Satyr',
+      version='0.1',
+      description='A Mesos framework library mimicing multiprocessing',
+      url='http://github.com/lensacom/satyr',
+      maintainer='Zoltan Nagy',
+      maintainer_email='zoltan.nagy@lensa.com',
+      license='BSD',
+      keywords='mesos framework multiprocessing',
+      packages=['satyr'],
+      long_description=(open('README.rst').read() if exists('README.rst')
+                        else ''),
+      install_requires=[],
+      setup_requires=['pytest-runner'],
+      tests_require=['pytest'],
+      zip_safe=False)

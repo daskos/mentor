@@ -20,13 +20,6 @@ box: python:2.7-slim
 # Read more about pipelines on our dev center
 # http://devcenter.wercker.com/docs/pipelines/index.html
 
-dev:
-  steps:
-    - script:
-        name: pip install
-        code: |
-          pip install .
-
 build:
   # The steps that will be executed on build
   # Steps make up the actions in your pipeline

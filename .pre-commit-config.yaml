@@ -1,0 +1,28 @@
+- repo: https://github.com/pre-commit/pre-commit-hooks.git
+  sha: HEAD
+  hooks:
+    - id: trailing-whitespace
+    - id: end-of-file-fixer
+    - id: detect-private-key
+    - id: check-merge-conflict
+    - id: check-added-large-files
+      args: ["--maxkb=1024"]
+    - id: autopep8-wrapper
+      exclude: docs/conf.py
+      args: ['-i', '--ignore=E501']
+    - id: check-docstring-first
+    - id: check-json
+    - id: pretty-format-json
+    - id: check-yaml
+    - id: check-xml
+    - id: debug-statements
+    - id: requirements-txt-fixer
+    - id: autopep8-wrapper
+    - id: flake8
+      exclude: docs/conf.py
+      args: [--max-line-length=80]
+- repo: https://github.com/FalconSocial/pre-commit-python-sorter
+  sha: HEAD
+  hooks:
+    - id: python-import-sorter
+      args: ['--silent-overwrite']

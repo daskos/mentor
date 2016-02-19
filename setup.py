@@ -12,7 +12,7 @@ setup(name='satyr',
       maintainer_email='zoltan.nagy@lensa.com',
       license='BSD',
       keywords='mesos framework multiprocessing',
-      packages=['satyr'],
+      packages=['satyr', 'satyr.executors', 'satyr.event_handlers'],
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
       install_requires=['cloudpickle'],

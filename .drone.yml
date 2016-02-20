@@ -1,4 +1,9 @@
+matrix:
+  PYTHON_VERSION:
+    - 2.7
+    - 3.5
+              
 build:
-  image: python:2.7
+  image: python:$$PYTHON_VERSION
   commands:
     - python setup.py install

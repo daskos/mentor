@@ -45,7 +45,7 @@ class ResourceOfferHandler(object):
             tasks.append(task)
             return self.create_task_list(self.create_new_task_resources(resources, task_resources), tasks)
 
-        self.task_queue.appendleft(task)
+        self.scheduler.task_queue.appendleft(task)
 
         return tasks
 
@@ -63,7 +63,9 @@ class ResourceOfferHandler(object):
 
     def create_task(self, offer, data):
         self.scheduler.task_stats['created'] += 1
-        task = build('task_info', data, self.scheduler, offer)
+
+        executor = build('executor_info', self.scheduler.config, data)
+        task = build('task_info', data, self.scheduler, executor, offer)
         self.add_resources_to_task(task, data)
 
         return task

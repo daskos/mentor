@@ -23,6 +23,7 @@ class Satyr():
         task = {
             'id': str(uuid.uuid4()),
             'resources': kwargs.pop('resources', {}),
+            'image': kwargs.pop('image', None),
             'msg': cloudpickle.dumps({'func': func, 'args': args, 'kwargs': kwargs})
         }
 
@@ -48,7 +49,6 @@ def create_satyr(config):
             sched.satyr.results[result['id']] = result['msg']
             sched.satyr.async_results[result['id']].flags += (SatyrAsyncResult.FLAG_READY,)
 
-    config = dict(default_config, **config)
     sched  = scheduler.create_scheduler(config, store_result)
 
     return Satyr(sched)

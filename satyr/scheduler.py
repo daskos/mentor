@@ -16,10 +16,9 @@ class SatyrScheduler(Scheduler, Skeleton):
     task_stats = {'running': 0, 'successful': 0, 'failed': 0, 'created': 0}
     driver_states = {'is_starting': True, 'force_shutdown': False, 'is_running': True}
 
-    def __init__(self, config, task_executor):
+    def __init__(self, config):
         print 'Starting framework [%s]' % config['name']
-        self.config = dict(default_config, **config)
-        self.task_executor = task_executor
+        self.config = config
         self.name = config['name']
         self.task_queue = Queue()
         self.satyr = None
@@ -44,17 +43,8 @@ class SatyrScheduler(Scheduler, Skeleton):
         self.driver_states['is_running'] = False
 
 
-def create_task_executor(config):
-    executor = build('executor_info', config)
-    uri = executor.command.uris.add()
-    uri.value = os.path.join(config['executor_dir'], config['executor_file'])
-    uri.extract = False
-
-    return executor
-
-
 def create_scheduler(config, executor_message_handler=None, job=None):
-    scheduler = SatyrScheduler(config, create_task_executor(config))
+    scheduler = SatyrScheduler(config)
     if executor_message_handler:
         scheduler.add_handler('frameworkMessage', executor_message_handler)
     scheduler.add_handler('resourceOffers', ResourceOfferHandler(scheduler))

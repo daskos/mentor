@@ -58,6 +58,6 @@ def build(name, *args, **kwargs):
 
     def filters(config):
         filters = mesos_pb2.Filters()
-        filters.refuse_seconds = config.get('filter_refuse_seconds', 300)
+        filters.refuse_seconds = config['filter_refuse_seconds']
         return filters
     return locals().get(name)(*args, **kwargs)

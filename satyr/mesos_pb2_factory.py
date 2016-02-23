@@ -9,7 +9,7 @@ def build(name, *args, **kwargs):
     almost certain that there's a better way to do this."""
     def framework_info(config):
         framework = mesos_pb2.FrameworkInfo()
-        framework.user = config.get('user', '')
+        framework.user = config['user']
         framework.name = config['name']
         return framework
 

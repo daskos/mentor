@@ -6,13 +6,13 @@ from copy import copy
 default = {
     'id': 'satyr',
     'name': 'Satyr',
+    'user': 'root',
+    'master': '192.168.1.127:5050',
     'resources': {'cpus': 0.1, 'mem': 128},
     'max_tasks': 1,
-    'master': '192.168.1.127:5050',
-    'user': 'root',
     'command': 'python -m satyr.executors.pickled',
-    'permanent': False,
-    'filter_refuse_seconds': 300
+    'filter_refuse_seconds': 5,
+    'permanent': False
 }
 
 

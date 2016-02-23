@@ -1,5 +1,6 @@
-from mesos.interface import mesos_pb2
 import threading
+
+from mesos.interface import mesos_pb2
 
 from ..mesos_pb2_factory import build
 
@@ -28,22 +29,29 @@ class ResourceOfferHandler(object):
                 driver.declineOffer(offer.id, self.filters)
                 continue
 
-            tasks = [self.create_task(offer, task) for task in self.create_task_list(self.get_resources_from_offer(offer), [])]
+            tasks = [self.create_task(offer, task) for task in self.create_task_list(
+                self.get_resources_from_offer(offer), [])]
 
             print 'We\'re starting %d new task(s)' % len(tasks)
-            driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(offer.id, self.filters)
+            driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(
+                offer.id, self.filters)
 
     def get_resources_from_offer(self, offer):
         return {res.name: res.scalar.value for res in offer.resources}
 
     def create_task_list(self, resources, tasks):
-        if not len(self.scheduler.task_queue): return tasks
+        if not len(self.scheduler.task_queue):
+            return tasks
 
         task = self.scheduler.task_queue.popleft()
         task_resources = self.create_task_resources(task)
-        if self.task_fits_into_remaining_resources(resources, task_resources) and len(tasks) < self.scheduler.config['max_tasks']:
+        fits = self.task_fits_into_remaining_resources(
+            resources, task_resources)
+
+        if fits and len(tasks) < self.scheduler.config['max_tasks']:
             tasks.append(task)
-            return self.create_task_list(self.create_new_task_resources(resources, task_resources), tasks)
+            return self.create_task_list(
+                self.create_new_task_resources(resources, task_resources), tasks)
 
         self.scheduler.task_queue.appendleft(task)
 
@@ -56,10 +64,16 @@ class ResourceOfferHandler(object):
         to the list and only verifies if the current task fits.
         A smarter, resource optimized method could be easely
         introduced."""
-        return all([val - task_resources.get(name, 0) > 0 for name, val in resources.items() if name in task_resources])
+        def fits(name, val):
+            return val - task_resources.get(name, 0) > 0
+
+        return all([fits(name, val) for name, val in resources.items() if name in task_resources])
 
     def create_new_task_resources(self, resources, task_resources):
-        return {name: val - task_resources.get(name, 0) for name, val in resources.items() if name in task_resources}
+        def calc(name, val):
+            return val - task_resources.get(name, 0)
+
+        return {name: calc(name, val) for name, val in resources.items() if name in task_resources}
 
     def create_task(self, offer, data):
         self.scheduler.task_stats['created'] += 1

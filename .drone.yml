@@ -2,7 +2,7 @@ matrix:
   PYTHON_VERSION:
     - 2.7
     - 3.5
-              
+
 build:
   image: python:$$PYTHON_VERSION
   commands:

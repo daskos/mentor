@@ -1,6 +1,6 @@
+import cloudpickle
 from mesos.interface import mesos_pb2
 from satyr import executor
-import json, cloudpickle
 
 
 def create_pickled_executor():

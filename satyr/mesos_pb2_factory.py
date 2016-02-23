@@ -1,12 +1,12 @@
-from mesos.interface import mesos_pb2
 from uuid import uuid4
-import os
+
+from mesos.interface import mesos_pb2
 
 
-"""Put all the horrible mesos protobuf instantiations
-into this equally horrible collection of factories. I'm
-almost certain that there's a better way to do this."""
 def build(name, *args, **kwargs):
+    """Put all the horrible mesos protobuf instantiations
+    into this equally horrible collection of factories. I'm
+    almost certain that there's a better way to do this."""
     def framework_info(config):
         framework = mesos_pb2.FrameworkInfo()
         framework.user = config.get('user', '')
@@ -15,7 +15,8 @@ def build(name, *args, **kwargs):
 
     def task_info(data, scheduler, executor, offer):
         task = mesos_pb2.TaskInfo()
-        task.task_id.value = str(data.pop('id', scheduler.task_stats['created']).zfill(5))
+        task.task_id.value = str(
+            data.pop('id', scheduler.task_stats['created']).zfill(5))
         task.slave_id.value = offer.slave_id.value
         task.name = '%s-%s' % (executor.name, task.task_id.value)
         task.executor.MergeFrom(executor)
@@ -46,14 +47,14 @@ def build(name, *args, **kwargs):
 
     def container_info():
         container = mesos_pb2.ContainerInfo()
-        container.type = 1 # docker
+        container.type = 1  # docker
         return container
 
     def docker_info(image):
         docker = mesos_pb2.ContainerInfo.DockerInfo()
         docker.image = image
-        docker.network = 1 # HOST
-        docker.force_pull_image = False
+        docker.network = 1  # HOST
+        docker.force_pull_image = True
         return docker
 
     def filters(config):

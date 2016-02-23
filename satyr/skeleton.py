@@ -1,5 +1,7 @@
+import sys
+import types
+
 from mesos.interface import mesos_pb2
-import types, sys
 
 
 class Skeleton(object):
@@ -23,10 +25,12 @@ class Skeleton(object):
 
     def add_handler(self, name, method):
         if name not in self.ALLOWED_HANDLERS:
-            raise ValueError('You are not allowed to set such a handler: %s' % name)
+            raise ValueError(
+                'You are not allowed to set such a handler: %s' % name)
 
         self.__dict__[name] = types.MethodType(method, self)
-        self.__dict__[name.title().replace('_', '')] = types.MethodType(method, self) # yo, bitch! :'(
+        self.__dict__[name.title().replace('_', '')] = types.MethodType(
+            method, self)  # yo, bitch! :'(
         print 'Handler added [%s]' % name
 
 

@@ -1,7 +1,9 @@
-from satyr import scheduler, executor
-from mesos.interface import mesos_pb2
-import time, os, sys
+import os
+import sys
+import time
 
+from mesos.interface import mesos_pb2
+from satyr import executor, scheduler
 
 config = {
     'id': 'satyr',
@@ -36,5 +38,6 @@ if __name__ == '__main__':
         executor.run_executor(echoer)
     else:
         config['name'] = sys.argv[1]
-        echoer = scheduler.create_scheduler(config, run_on_scheduler, 'Initial job')
+        echoer = scheduler.create_scheduler(
+            config, run_on_scheduler, 'Initial job')
         scheduler.run_scheduler(echoer)

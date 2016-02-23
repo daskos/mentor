@@ -2,6 +2,7 @@ from collections import deque
 
 
 class Queue(deque):
+
     def put(self, value):
         self.append(value)
 

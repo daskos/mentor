@@ -20,7 +20,7 @@
     - id: autopep8-wrapper
     - id: flake8
       exclude: docs/conf.py
-      args: [--max-line-length=80]
+      args: [--max-line-length=100]
 - repo: https://github.com/FalconSocial/pre-commit-python-sorter
   sha: HEAD
   hooks:

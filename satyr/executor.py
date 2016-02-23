@@ -1,14 +1,16 @@
+import threading
+
 from mesos.interface import Executor, mesos_pb2
 from mesos.native import MesosExecutorDriver
 from skeleton import Skeleton, create_driver_method
-import threading
 
 
 class SatyrExecutor(Executor, Skeleton):
     ALLOWED_HANDLERS = ['runTask']
 
     def launchTask(self, driver, task):
-        driver.sendStatusUpdate(self.create_status_update(task, mesos_pb2.TASK_STARTING))
+        driver.sendStatusUpdate(self.create_status_update(
+            task, mesos_pb2.TASK_STARTING))
         thread = threading.Thread(target=self.runTask, args=(driver, task))
         thread.start()
 

@@ -1,12 +1,16 @@
-import cloudpickle, uuid, copy
-from time import sleep
-from mesos.interface import mesos_pb2
+import copy
+import uuid
 from multiprocessing.pool import AsyncResult
-from .config import default as default_config
+from time import sleep
+
+import cloudpickle
+from mesos.interface import mesos_pb2
+
 from . import scheduler
 
 
 class Satyr():
+
     @property
     def queue(self):
         return self.sched.task_queue
@@ -36,9 +40,9 @@ class Satyr():
         id = task_status.task_id.value
         status = task_status.state
 
-        if status == mesos_pb2.TASK_FINISHED: # 2
+        if status == mesos_pb2.TASK_FINISHED:
             self.async_results[id].update_status(task_status, True)
-        elif status in [mesos_pb2.TASK_FAILED, mesos_pb2.TASK_LOST, mesos_pb2.TASK_KILLED]: # 3, 5, 4
+        elif status in [mesos_pb2.TASK_FAILED, mesos_pb2.TASK_LOST, mesos_pb2.TASK_KILLED]:
             self.async_results[id].update_status(task_status, False)
 
 
@@ -47,9 +51,10 @@ def create_satyr(config):
         result = cloudpickle.loads(message)
         if result.get('response', False) and sched.satyr:
             sched.satyr.results[result['id']] = result['msg']
-            sched.satyr.async_results[result['id']].flags += (SatyrAsyncResult.FLAG_READY,)
+            sched.satyr.async_results[result['id']
+                                      ].flags += (SatyrAsyncResult.FLAG_READY,)
 
-    sched  = scheduler.create_scheduler(config, store_result)
+    sched = scheduler.create_scheduler(config, store_result)
 
     return Satyr(sched)
 
@@ -60,7 +65,7 @@ class SatyrAsyncResult(AsyncResult):
 
     def __init__(self, satyr, task):
         self.satyr = satyr
-        self.task  = copy.copy(task)
+        self.task = copy.copy(task)
         self.flags = ()
 
     def get(self, timeout=None):
@@ -79,5 +84,7 @@ class SatyrAsyncResult(AsyncResult):
         return self.FLAG_READY in self.flags and self.FLAG_SUCCESSFUL in self.flags
 
     def update_status(self, task, is_successful):
-        if not self.task['id'] == task.task_id.value: return
-        self.flags = self.flags + (self.FLAG_SUCCESSFUL,) if is_successful else self.flags
+        if not self.task['id'] == task.task_id.value:
+            return
+        self.flags = self.flags + \
+            (self.FLAG_SUCCESSFUL,) if is_successful else self.flags

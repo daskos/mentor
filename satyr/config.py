@@ -2,6 +2,7 @@ import os
 # from .executors import pickled as pickled_executor
 from copy import copy
 
+
 default = {
     'id': 'satyr',
     'name': 'Satyr',
@@ -16,6 +17,7 @@ default = {
 
 
 class Config(dict):
+
     def __init__(self, conf={}):
         """Reading config, always overwriting any value w/ the ones
         set in environment variables started as SATYR_."""

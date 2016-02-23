@@ -1,20 +1,20 @@
+from threading import Thread
+
 from mesos.interface import Scheduler
 from mesos.native import MesosSchedulerDriver
-from threading import Thread
-import os
 
 from .event_handlers import ResourceOfferHandler, StatusUpdateHandler
-from .skeleton import Skeleton, create_driver_method
-from .queue import Queue
-from .config import default as default_config
 from .mesos_pb2_factory import build
+from .queue import Queue
+from .skeleton import Skeleton, create_driver_method
 
 
 class SatyrScheduler(Scheduler, Skeleton):
     ALLOWED_HANDLERS = ['resourceOffers', 'statusUpdate', 'frameworkMessage']
 
     task_stats = {'running': 0, 'successful': 0, 'failed': 0, 'created': 0}
-    driver_states = {'is_starting': True, 'force_shutdown': False, 'is_running': True}
+    driver_states = {'is_starting': True,
+                     'force_shutdown': False, 'is_running': True}
 
     def __init__(self, config):
         print 'Starting framework [%s]' % config['name']
@@ -50,14 +50,15 @@ def create_scheduler(config, executor_message_handler=None, job=None):
     scheduler.add_handler('resourceOffers', ResourceOfferHandler(scheduler))
     scheduler.add_handler('statusUpdate', StatusUpdateHandler(scheduler))
 
-    if not job is None:
+    if job is not None:
         scheduler.add_job(job)
 
     return scheduler
 
 
 def run_scheduler(scheduler):
-    driver = MesosSchedulerDriver(scheduler, build('framework_info', scheduler.config), scheduler.config['master'])
+    driver = MesosSchedulerDriver(scheduler, build(
+        'framework_info', scheduler.config), scheduler.config['master'])
     framework_thread = Thread(target=create_driver_method(driver), args=())
     framework_thread.start()
     return framework_thread

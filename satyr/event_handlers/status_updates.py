@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 from mesos.interface import mesos_pb2
 
 
@@ -17,9 +19,9 @@ class StatusUpdateHandler(object):
 
     def __call__(self, scheduler, driver, taskStatus):
         status = taskStatus.state
-        print 'Recieved a status update [%s]' % status
+        print('Recieved a status update [%s]' % status)
         if status not in self.modifiers:
-            print 'Unknown state code [%s]' % status
+            print('Unknown state code [%s]' % status)
 
         for name, value in self.modifiers[status]:
             self.scheduler.task_stats[name] += value

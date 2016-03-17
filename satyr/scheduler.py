@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 from threading import Thread
 
 from mesos.interface import Scheduler
@@ -17,7 +19,7 @@ class SatyrScheduler(Scheduler, Skeleton):
                      'force_shutdown': False, 'is_running': True}
 
     def __init__(self, config):
-        print 'Starting framework [%s]' % config['name']
+        print('Starting framework [%s]' % config['name'])
         self.config = config
         self.name = config['name']
         self.task_queue = Queue()
@@ -35,7 +37,7 @@ class SatyrScheduler(Scheduler, Skeleton):
                 self.driver_states['is_starting'],
                 self.task_stats['running'],
                 len(self.task_queue))):
-            print 'We are finished.'
+            print('We are finished.')
             self.shutdown(driver)
 
     def shutdown(self, driver):

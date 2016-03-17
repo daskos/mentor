@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import sys
 import types
 
@@ -16,10 +18,10 @@ class Skeleton(object):
         so be careful w/ it.
         """
 
-        print 'Tried to access member method [%s]' % name
+        print('Tried to access member method [%s]' % name)
 
         def handler(*args, **kwargs):
-            print 'Event [%s] triggered (%s) (%s)' % (name, args, kwargs)
+            print('Event [%s] triggered (%s) (%s)' % (name, args, kwargs))
 
         return handler
 
@@ -31,7 +33,7 @@ class Skeleton(object):
         self.__dict__[name] = types.MethodType(method, self)
         self.__dict__[name.title().replace('_', '')] = types.MethodType(
             method, self)  # yo, bitch! :'(
-        print 'Handler added [%s]' % name
+        print('Handler added [%s]' % name)
 
 
 def create_driver_method(driver):

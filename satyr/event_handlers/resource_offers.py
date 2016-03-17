@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import threading
 
 from mesos.interface import mesos_pb2
@@ -17,7 +19,7 @@ class ResourceOfferHandler(object):
         """An offer should not block the scheduler so we try to
         run to run it separately from it. In the meantime more
         offers may arrive."""
-        print 'Recieved %d resource offer(s)' % len(offers)
+        print('Recieved %d resource offer(s)' % len(offers))
         t = threading.Thread(target=self.handle_offers, args=(driver, offers))
         t.start()
 
@@ -25,14 +27,14 @@ class ResourceOfferHandler(object):
         self.scheduler.shutdown_if_done(driver)
         for offer in offers:
             if not self.scheduler.should_be_running():
-                print 'Declining offer [%s]' % offer.id
+                print('Declining offer [%s]' % offer.id)
                 driver.declineOffer(offer.id, self.filters)
                 continue
 
             tasks = [self.create_task(offer, task) for task in self.create_task_list(
                 self.get_resources_from_offer(offer), [])]
 
-            print 'We\'re starting %d new task(s)' % len(tasks)
+            print('We\'re starting %d new task(s)' % len(tasks))
             driver.launchTasks(offer.id, tasks) if tasks else driver.declineOffer(
                 offer.id, self.filters)
 

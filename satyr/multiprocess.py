@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import copy
 import uuid
 from multiprocessing.pool import AsyncResult
@@ -75,7 +77,7 @@ class SatyrAsyncResult(AsyncResult):
     def wait(self, timeout=None):
         while not self.ready():
             sleep(1)
-            print '[%s] Waiting to get ready...' % self.task['id']
+            print('[%s] Waiting to get ready...' % self.task['id'])
 
     def ready(self):
         return self.FLAG_READY in self.flags

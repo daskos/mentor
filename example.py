@@ -3,10 +3,11 @@ import sys
 import time
 
 from mesos.interface import mesos_pb2
-from satyr import executor
+from satyr.config import Config
+from satyr.executor import SatyrExecutor
 from satyr.scheduler import SatyrScheduler
 
-config = {
+config = Config(conf={
     'id': 'satyr',
     'name': 'Satyr',
     'resources': {'cpus': 0.1, 'mem': 128},
@@ -16,7 +17,7 @@ config = {
     'filter_refuse_seconds': 10,
     'permanent': False,
     'command': 'python %s/example.py' % os.path.dirname(os.path.realpath(__file__))
-}
+})
 
 
 def run_on_scheduler(scheduler, driver, executorId, slaveId, data):
@@ -35,9 +36,9 @@ def run_on_executor(executor, driver, task):
 # With name it runs the scheduler otherwise the executor.
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        echoer = executor.create_executor(run_on_executor)
-        executor.run_executor(echoer)
+        e = SatyrExecutor(run_on_executor)
+        e.run()
     else:
         s = SatyrScheduler(config, run_on_scheduler)
-        s.add_job({'some': 'stuff'})
+        s.add_job({'cmd': 'echo 1'})
         s.run()

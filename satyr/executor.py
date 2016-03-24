@@ -8,10 +8,13 @@ from skeleton import Skeleton, create_driver_method
 class SatyrExecutor(Executor, Skeleton):
     ALLOWED_HANDLERS = ['runTask']
 
+    def __init__(self, run_task):
+        self.run_task = run_task
+
     def launchTask(self, driver, task):
         driver.sendStatusUpdate(self.create_status_update(
             task, mesos_pb2.TASK_STARTING))
-        thread = threading.Thread(target=self.runTask, args=(driver, task))
+        thread = threading.Thread(target=self.run_task, args=(self, driver, task))
         thread.start()
 
     def create_status_update(self, task, state):
@@ -26,13 +29,6 @@ class SatyrExecutor(Executor, Skeleton):
     def send_framework_message(self, driver, message):
         driver.sendFrameworkMessage(message)
 
-
-def create_executor(run_task_handler):
-    executor = SatyrExecutor()
-    executor.add_handler('runTask', run_task_handler)
-    return executor
-
-
-def run_executor(executor):
-    method = create_driver_method(MesosExecutorDriver(executor))
-    return method()
+    def run(self):
+        method = create_driver_method(MesosExecutorDriver(self))
+        return method()

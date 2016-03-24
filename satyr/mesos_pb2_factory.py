@@ -56,7 +56,7 @@ def build(name, *args, **kwargs):
         docker = mesos_pb2.ContainerInfo.DockerInfo()
         docker.image = image
         docker.network = 1  # HOST
-        docker.force_pull_image = True
+        docker.force_pull_image = False
         return docker
 
     def filters(config):

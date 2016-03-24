@@ -1,9 +1,32 @@
-matrix:
-  PYTHON_VERSION:
-    - 2.7
-    - 3.5
+compose:
+  zookeeper:
+    image: jplock/zookeeper
+  mesos-master:
+    image: mesosphere/mesos-master:0.26.0-0.2.145.ubuntu1404
+    environment:
+      - MESOS_ZK=zk://localhost:2181/mesos
+      - MESOS_HOSTNAME=localhost
+      - MESOS_QUORUM=1
+      - MESOS_REGISTRY=in_memory
+  mesos-slave:
+    image: mesosphere/mesos-slave-dind:0.2.4_mesos-0.26.0_docker-1.8.2_ubuntu-14.04.3
+    environment:
+      - MESOS_MASTER=zk://localhost:2181/mesos
+      - MESOS_HOSTNAME=localhost
+      - MESOS_CONTAINERIZERS=docker,mesos
+      - MESOS_WORK_DIR=/tmp/dask.mesos/mesos
+      - MESOS_STRICT=false
+    volumes:
+      - /tmp/dask.mesos/mesos:/tmp/dask.mesos/mesos
+      - /var/run/docker.sock:/var/run/docker.sock
+    privileged: true
+
 
 build:
-  image: python:$$PYTHON_VERSION
+  image: lensa/mesos-python:0.26.0-py2.7-python-2.7
+  environment:
+    - SATYR_MASTER=zk://localhost:2181/mesos
   commands:
-    - python setup.py install
+    - pip install --process-dependency-links -e .
+    - pip install pytest
+    - pytest satyr/tests

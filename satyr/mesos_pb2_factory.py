@@ -18,7 +18,7 @@ def build(name, *args, **kwargs):
     def task_info(data, scheduler, executor, offer):
         task = mesos_pb2.TaskInfo()
         task.task_id.value = str(
-            data.pop('id', scheduler.task_stats['created']).zfill(5))
+            data.pop('id', scheduler.task_stats['created'])).zfill(5)
         task.slave_id.value = offer.slave_id.value
         task.name = '%s-%s' % (executor.name, task.task_id.value)
         task.executor.MergeFrom(executor)
@@ -63,4 +63,5 @@ def build(name, *args, **kwargs):
         filters = mesos_pb2.Filters()
         filters.refuse_seconds = config['filter_refuse_seconds']
         return filters
+
     return locals().get(name)(*args, **kwargs)

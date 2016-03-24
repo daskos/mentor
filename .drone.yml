@@ -29,4 +29,4 @@ build:
   commands:
     - pip install --process-dependency-links -e .
     - pip install pytest
-    - pytest satyr/tests
+    - python -m pytest satyr/tests

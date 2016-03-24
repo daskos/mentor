@@ -1,11 +1,11 @@
 import threading
 
+import driver
 from mesos.interface import Executor, mesos_pb2
 from mesos.native import MesosExecutorDriver
-from skeleton import Skeleton, create_driver_method
 
 
-class SatyrExecutor(Executor, Skeleton):
+class SatyrExecutor(Executor):
     ALLOWED_HANDLERS = ['runTask']
 
     def __init__(self, run_task):
@@ -30,5 +30,4 @@ class SatyrExecutor(Executor, Skeleton):
         driver.sendFrameworkMessage(message)
 
     def run(self):
-        method = create_driver_method(MesosExecutorDriver(self))
-        return method()
+        driver.run(MesosExecutorDriver(self))

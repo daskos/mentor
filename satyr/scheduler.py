@@ -5,12 +5,12 @@ from threading import Thread
 from mesos.interface import Scheduler, mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
+from .driver import run
 from .mesos_pb2_factory import build
 from .queue import Queue
-from .skeleton import Skeleton, create_driver_method
 
 
-class SatyrScheduler(Scheduler, Skeleton):
+class SatyrScheduler(Scheduler):
     task_status_modifiers = {
         mesos_pb2.TASK_RUNNING: [('running', 1)],
         mesos_pb2.TASK_FINISHED: [('running', -1), ('successful', 1)],
@@ -157,6 +157,6 @@ class SatyrScheduler(Scheduler, Skeleton):
 
     def run(self):
         driver = MesosSchedulerDriver(self, build('framework_info', self.config), self.config['master'])
-        framework_thread = Thread(target=create_driver_method(driver), args=())
+        framework_thread = Thread(target=run(driver), args=())
         framework_thread.start()
         return framework_thread

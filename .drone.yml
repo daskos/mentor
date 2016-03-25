@@ -27,6 +27,8 @@ build:
   environment:
     - SATYR_MASTER=zk://localhost:2181/mesos
   commands:
+    #- easy_install http://downloads.mesosphere.io/master/debian/8/mesos-0.26.0-py2.7-linux-x86_64.egg
     - pip install --process-dependency-links -e .
     - pip install pytest
-    - python -m pytest satyr/tests
+    - sleep 10000000000000
+    #- python -m pytest satyr/tests

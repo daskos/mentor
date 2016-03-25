@@ -1,13 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
 from threading import Thread
+import signal
+
+import atexit
+import multiprocessing as mp
+
 
 from mesos.interface import Scheduler, mesos_pb2
-from mesos.native import MesosSchedulerDriver
 
 from .driver import run
-from .mesos_pb2_factory import build
+from .mesos_pb2_factory import *
 from .queue import Queue
+
+from . import log
+from .utils import catch
+
 
 
 class SatyrScheduler(Scheduler):
@@ -55,14 +63,14 @@ class SatyrScheduler(Scheduler):
     def resourceOffers(self, driver, offers):
         print('Recieved %d resource offer(s)' % len(offers))
 
-        filters = build('filters', self.config)
+        _filters = filters(self.config)
 
         def handle_offers(driver, offers):
             self.shutdown_if_done(driver)
             for offer in offers:
                 if not self.should_be_running():
                     print('Declining offer [%s]' % offer.id)
-                    driver.declineOffer(offer.id, filters)
+                    driver.declineOffer(offer.id, _filters)
                     continue
 
                 tasks = [create_task(offer, task) for task in create_task_list(
@@ -114,8 +122,8 @@ class SatyrScheduler(Scheduler):
         def create_task(offer, data):
             self.task_stats['created'] += 1
 
-            executor = build('executor_info', self.config, data)
-            task = build('task_info', data, self, executor, offer)
+            executor = executor_info(self.config, data)
+            task = task_info(data, self, executor, offer)
             add_resources_to_task(task, data)
 
             return task
@@ -155,8 +163,49 @@ class SatyrScheduler(Scheduler):
         driver.stop()
         self.driver_states['is_running'] = False
 
-    def run(self):
-        driver = MesosSchedulerDriver(self, build('framework_info', self.config), self.config['master'])
-        framework_thread = Thread(target=run(driver), args=())
-        framework_thread.start()
-        return framework_thread
+
+#class OfferWrapper(object):
+    # """ Wrapper around a protobuf Offer object. Provides numerous
+    # conveniences including comparison (we currently use a least loaded
+    # approach), and being able to assign jobsteps to the offer.
+    # """
+    # def __init__(self, offer):
+    #     self.offer = offer
+    #     self.hostname = offer.hostname
+    #     self.reset_state()
+
+    # def reset_state(self):
+    #     resources = ChangesScheduler.get_resources(self.offer)
+    #     self.cpus = resources.get('cpus', 0)
+    #     self.memory = resources.get('mem', 0)
+    #     self.jobsteps = []
+
+    # def __cmp__(self, other):
+    #     # we prioritize first by cpu then memory.
+    #     # (values are negated so more resources sorts as "least loaded")
+    #     us = (-self.cpus, -self.memory)
+    #     them = (-other.cpus, -other.memory)
+    #     if us < them:
+    #         return -1
+    #     return 0 if us == them else 1
+
+    # def cluster(self):
+    #     return ChangesScheduler.get_cluster(self.offer)
+
+    # def has_resources_for(self, jobstep):
+    #     return self.cpus >= jobstep['resources']['cpus'] and self.memory >= jobstep['resources']['mem']
+
+    # def commit_resources_for(self, jobstep):
+    #     assert self.has_resources_for(jobstep)
+    #     self.cpus -= jobstep['resources']['cpus']
+    #     self.memory -= jobstep['resources']['mem']
+
+    # def has_resources(self):
+    #     return self.cpus > 0 and self.memory > 0
+
+    # def add_jobstep(self, jobstep):
+    #     self.commit_resources_for(jobstep)
+    #     self.jobsteps.append(jobstep)
+
+    # def remove_all_jobsteps(self):
+    #     self.reset_state()

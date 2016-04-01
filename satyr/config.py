@@ -15,17 +15,3 @@ default = {
     'filter_refuse_seconds': 5,
     'permanent': False
 }
-
-
-class Config(dict):
-
-    def __init__(self, conf={}):
-        """Reading config, always overwriting any value w/ the ones
-        set in environment variables started as SATYR_."""
-        d = copy(default)
-        d.update(conf)
-        for k, v in d.items():
-            setattr(self, k, os.getenv('SATYR_' + k.upper(), v))
-
-    def __getitem__(self, key):
-        return getattr(self, key)

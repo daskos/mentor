@@ -2,7 +2,10 @@ from satyr import log
 from toolz import curry
 from functools import wraps
 import inspect
-
+import logging
+import signal
+import os
+import sys
 
 @curry
 def envargs(fn, prefix='', envs=os.environ):
@@ -32,6 +35,23 @@ def catch(func, exception_sender):
         try:
             func(*args, **kwargs)
         except Exception as e:
-            log.exception(e)
+            logging.exception(e)
             exception_sender.send(e)
     return f
+
+
+def set_signals(process):
+    """Kill child processes on sigint or sigterm"""
+    def kill_children(signal, frame):
+        logging.error('Received a signal that is trying to terminate this '
+                      'process.', extra=dict(signal=signal))
+        try:
+            process.terminate()
+            logging.info('terminated process',
+                         extra=dict(name=process.name, pid=process.pid))
+        except:
+            logging.exception('could not terminate subprocess',
+                              extra=dict(name=process.name, pid=process.pid))
+        sys.exit(1)
+    signal.signal(signal.SIGTERM, kill_children)
+    signal.signal(signal.SIGINT, kill_children)

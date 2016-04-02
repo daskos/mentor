@@ -30,5 +30,5 @@ build:
     #- easy_install http://downloads.mesosphere.io/master/debian/8/mesos-0.26.0-py2.7-linux-x86_64.egg
     - pip install --process-dependency-links -e .
     - pip install pytest
-    - sleep 10000000000000
+    #- sleep 10000000000000
     #- python -m pytest satyr/tests

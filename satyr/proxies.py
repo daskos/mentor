@@ -168,15 +168,8 @@ class ExecutorProxy(Executor):
     methods they don't override.
     """
 
-    def on_registered(self, driver, executor_info, framework_info, slave_info):
-        pass
-
-    def on_reregistered(self, driver, slave_info): pass
-    def on_disconnected(self, driver): pass
-    def on_message(self, driver, message): pass
-    def on_launch(self, driver, task): pass
-    def on_shutdown(self, driver): pass
-    def on_error(self, driver, message): pass
+    def __init__(self, executor):
+        self.executor = executor
 
     def registered(self, driver, executorInfo, frameworkInfo, slaveInfo):
         """Invoked once the executor driver has been able to successfully connect
@@ -186,12 +179,15 @@ class ExecutorProxy(Executor):
         the FrameworkInfo.ExecutorInfo's data field.
         """
         # TODO logging
-        return self.on_registered(driver, executorInfo, frameworkInfo, slaveInfo)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_registered(driver, executorInfo, frameworkInfo,
+                                           slaveInfo)
 
     def reregistered(self, driver, slaveInfo):
         """Invoked when the executor re-registers with a restarted slave."""
         # TODO logging
-        return self.on_reregistered(driver, slaveInfo)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_reregistered(driver, slaveInfo)
 
     def disconnected(self, driver):
         """Invoked when the executor becomes "disconnected" from the slave
@@ -199,7 +195,8 @@ class ExecutorProxy(Executor):
         (e.g., the slave is being restarted due to an upgrade)
         """
         # TODO logging
-        return self.on_disconnected(driver)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_disconnected(driver)
 
     def launchTask(self, driver, task):
         """Invoked when a task has been launched on this executor (initiated via
@@ -210,7 +207,8 @@ class ExecutorProxy(Executor):
         executor until this callback has returned.
         """
         # TODO logging
-        return self.on_launch(driver, task)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_launch(driver, task)
 
     def killTask(self, driver, taskId):
         """Invoked when a task running within this executor has been killed (via
@@ -221,7 +219,8 @@ class ExecutorProxy(Executor):
         TASK_KILLED) and invoking ExecutorDriver's sendStatusUpdate.
         """
         # TODO logging
-        return self.on_kill(driver, task_id)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_kill(driver, task_id)
 
     def frameworkMessage(self, driver, message):
         """Invoked when a framework message has arrived for this executor.
@@ -230,7 +229,8 @@ class ExecutorProxy(Executor):
         retransmitted in any reliable fashion.
         """
         # TODO logging
-        return self.on_message(driver, message)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_message(driver, message)
 
     def shutdown(self, driver):
         """Invoked when the executor should terminate all of its currently
@@ -242,7 +242,8 @@ class ExecutorProxy(Executor):
         will be created.
         """
         # TODO logging
-        return self.on_shutdown(driver)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_shutdown(driver)
 
     def error(self, driver, message):
         """Invoked when a fatal error has occurred with the executor and/or
@@ -252,7 +253,8 @@ class ExecutorProxy(Executor):
         """
         # TODO logging
         print("Error from Mesos: %s" % message, file=sys.stderr)
-        return self.on_error(driver, message)
+        driver = ExecutorDriverProxy(driver)
+        return self.executor.on_error(driver, message)
 
 
 class SchedulerDriverProxy(SchedulerDriver):
@@ -289,16 +291,6 @@ class SchedulerDriverProxy(SchedulerDriver):
         task_infos = [task.encode(offer) for task in tasks]
         self.driver.launchTasks(offer.id, task_infos, filters=filters)  # filters?
 
-    def decline(self, offer, filters=[]):
-        """Declines an offer in its entirety and applies the specified
-           filters on the resources (see mesos.proto for a description of
-           Filters).
-
-        Note that this can be done at any time, it is not necessary to do this
-        within the Scheduler::resourceOffers callback.
-        """
-        return self.driver.declineOffer(offer.id)  #TODO filters
-
     def kill(self, task):
         """Kills the specified task.
 
@@ -321,35 +313,43 @@ class SchedulerDriverProxy(SchedulerDriver):
         task_infos = [task.encode() for task in tasks]
         return self.driver.reconcileTasks(task_infos)
 
-    #accept = SchedulerDriver.acceptOffers # TODO convert arguments to infos
-    #revive = SchedulerDriver.reviveOffers
-    #suppress = SchedulerDriver.suppressOffers
+    def decline(self, offer, filters=None):
+        """Declines an offer in its entirety and applies the specified
+           filters on the resources (see mesos.proto for a description of
+           Filters).
 
-    # def acceptOffers(self, offerIds, operations, filters=None):
-    #   """
-    #     Accepts the given offers and performs a sequence of operations
-    #     on those accepted offers. See Offer.Operation in mesos.proto for
-    #     the set of available operations. Available resources are
-    #     aggregated when multiple offers are provided. Note that all
-    #     offers must belong to the same slave. Any unused resources will
-    #     be considered declined. The specified filters are applied on all
-    #     unused resources (see mesos.proto for a description of Filters).
-    #   """
+        Note that this can be done at any time, it is not necessary to do this
+        within the Scheduler::resourceOffers callback.
+        """
+        return self.driver.declineOffer(offer.id)  #TODO filters
 
-    # def declineOffer(self, offerId, filters=None):
+    def accept(self, offer_ids, operations, filters=None):
+        """Accepts the given offers and performs a sequence of operations
+           on those accepted offers.
 
-    # def reviveOffers(self):
-    #   """
-    #     Removes all filters previously set by the framework (via
-    #     launchTasks()).  This enables the framework to receive offers from
-    #     those filtered slaves.
-    #   """
+        See Offer.Operation in mesos.proto for the set of available operations.
+        Available resources are aggregated when multiple offers are provided.
 
-    # def suppressOffers(self):
-    #   """
-    #     Inform Mesos master to stop sending offers to the framework. The
-    #     scheduler should call reviveOffers() to resume getting offers.
-    #   """
+        Note that all offers must belong to the same slave. Any unused resources
+        will be considered declined. The specified filters are applied on all
+        unused resources (see mesos.proto for a description of Filters).
+        """
+        return self.driver.acceptOffers(self, offer_ids, operations, filters)
+
+    def revive(self):
+        """Removes all filters previously set by the framework (via
+           launchTasks()).
+
+        This enables the framework to receive offers from those filtered slaves.
+        """
+        return self.driver.reviveOffers()
+
+    def suppress(self):
+        """Inform Mesos master to stop sending offers to the framework.
+
+        The scheduler should call reviveOffers() to resume getting offers.
+        """
+        return self.driver.suppressOffers()
 
     def acknowledge(self, status):
         """Acknowledges the status update.
@@ -374,6 +374,45 @@ class SchedulerDriverProxy(SchedulerDriver):
 
 class ExecutorDriverProxy(ExecutorDriver):
 
+    def __init__(self, driver):
+        self.driver = driver
+
+    def start(self):
+        """Starts the executor driver.
+
+        This needs to be called before any other driver calls are made.
+        """
+        return self.driver.start()
+
+    def stop(self):
+        """Stops the executor driver."""
+        return self.driver.stop()
+
+    def abort(self):
+        """Aborts the driver so that no more callbacks can be made to the
+           executor.
+
+        The semantics of abort and stop have deliberately been separated so that
+        code can detect an aborted driver (i.e., via the return status of
+        ExecutorDriver.join), and instantiate and start another driver if
+        desired (from within the same process, although this functionality is
+        currently not supported for executors).
+        """
+        return self.driver.abort()
+
+    def join(self):
+        """Waits for the driver to be stopped or aborted, possibly blocking the
+           current thread indefinitely.
+
+        The return status of this function can be used to determine if the
+        driver was aborted (see mesos.proto for a description of Status).
+        """
+        return self.driver.join()
+
+    def run(self):
+        """Starts and immediately joins (i.e., blocks on) the driver."""
+        return self.driver.run()
+
     def update(self, status):
         """Sends a status update to the framework scheduler.
 
@@ -383,7 +422,7 @@ class ExecutorDriverProxy(ExecutorDriver):
         See Scheduler.statusUpdate for more information about status update
         acknowledgements.
         """
-        return self.sendStatusUpdate(status)
+        return self.driver.sendStatusUpdate(status)
 
     def message(self, data):
         """Sends a message to the framework scheduler.
@@ -391,4 +430,4 @@ class ExecutorDriverProxy(ExecutorDriver):
         These messages are best effort; do not expect a framework message to be
         retransmitted in any reliable fashion.
         """
-        return self.sendFrameworkMessage(data)
+        return self.driver.sendFrameworkMessage(data)

@@ -1,11 +1,17 @@
-from satyr import log
+from __future__ import absolute_import, division, print_function
+
+
 from toolz import curry
 from functools import wraps
 import inspect
 import logging
+import atexit
 import signal
+import time
 import os
 import sys
+import multiprocessing as mp
+#from . import log as logging
 
 @curry
 def envargs(fn, prefix='', envs=os.environ):
@@ -55,3 +61,30 @@ def set_signals(process):
         sys.exit(1)
     signal.signal(signal.SIGTERM, kill_children)
     signal.signal(signal.SIGINT, kill_children)
+
+
+def run_daemon(name, target, kwargs=dict()):
+    exception_receiver, exception_sender = mp.Pipe(False)
+
+    subproc = mp.Process(target=catch(target, exception_sender),
+                         kwargs=kwargs,
+                         name=name)
+    subproc.start()
+    set_signals(subproc)
+
+    while True:
+        if exception_receiver.poll():
+            exception_receiver.recv()
+            logging.error('Terminating child process because it raised an '
+                          'exception', extra=dict(is_alive=subproc.is_alive()))
+            break
+        if not subproc.is_alive():
+            logging.error('Mesos Scheduler died and didn\'t notify me of its '
+                          'exception. This may be a code bug. Check logs.',
+                          extra=dict())
+            break
+        # save cpu cycles by checking for subprocess failures less often
+        time.sleep(1)
+
+    subproc.terminate()
+    sys.exit(1)

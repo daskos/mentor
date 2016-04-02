@@ -17,6 +17,10 @@ config = Config(conf={
 })
 
 
+
+
+
+
 def run_on_scheduler(scheduler, driver, executorId, slaveId, data):
     print data
 

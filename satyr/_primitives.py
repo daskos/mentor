@@ -1,26 +1,80 @@
-# from core copy message wrappers to herefrom mesos.interface.mesos_pb2 import TaskID, Value, Environment, Volume, Resource
-from mesos.interface.mesos_pb2 import TaskInfo, CommandInfo
-from mesos.interface.mesos_pb2 import ContainerInfo, FrameworkInfo
+from __future__ import absolute_import, division, print_function
+
+from mesos.interface import mesos_pb2
+
+# black magic
+class Map(dict):
+    def __init__(self, mapping=None, **kwargs):
+        mapping = mapping or kwargs
+        for k, v in mapping.items():
+            if isinstance(v, dict):
+                mapping[k] = Map(v)
+            elif hasattr(v, '__iter__'):
+                mapping[k] = map(Map, value)
+        super(Map, self).__init__(mapping)
+        self.__dict__ = self
 
 
 def decode_typed_field(pb):
     field_type = pb.type
-    if field_type == Value.SCALAR:
+    if field_type == mesos_pb2.Value.SCALAR:
         return pb.scalar.value
-    elif field_type == Value.RANGES:
+    elif field_type == mesos_pb2.Value.RANGES:
         return [(ra.begin, ra.end) for ra in pb.ranges.range]
-    elif field_type == Value.SET:
+    elif field_type == mesos_pb2.Value.SET:
         return pb.set.item
-    elif field_type == Value.TEXT:
+    elif field_type == mesos_pb2.Value.TEXT:
         return pb.text.value
     else:
         raise ValueError("Unknown field type: %s", field_type)
 
 
+# organize messages to the following groups: decodeable, encodeable, both
+
+#
+# master: D
+
+# request: E
+# filter: E
+# operation: E
+
+# task: ED
+# slave: ED
+# taskstatus: ED
+# offer: ED
+# executor: ED
+# framework: ED
+
+class Master(object):
+
+    def __init__(self, mid, ip, port=5050, pid=None, hostname='', version=''):
+        self.mid = mid
+        self.ip = ip
+        self.pid = pid
+        self.port = port
+        self.hostname = hostname
+        self.version = version
+
+    @classmethod
+    def decode(cls, pb):
+        return cls()
+
+    def encode(self):
+        master = mesos_pb2.MasterInfo(id=self.mid,
+                                      ip=self.ip,
+                                      port=self.port,
+                                      pid=self.pid,
+                                      hostname=self.hostname,
+                                      version=self.version)
+
+        return master
+
+
 class Framework(object):
 
-    def __init__(self, name, user, role='*', principal='', checkpoint=False,
+    def __init__(self, name, user, fid=None, role='*', principal='', checkpoint=False,
                  webui_url=None):
+        self.fid = fid
         self.name = name
         self.user = user
         self.role = role
@@ -28,12 +82,16 @@ class Framework(object):
         self.checkpoint = checkpoint
         self.webui_url = webui_url
 
+    @classmethod
+    def decode(cls, pb):
+        return cls()
+
     def encode(self):
         # TODO: role, webui_url
-        framework = FrameworkInfo(user=self.user,
-                                  name=self.name,
-                                  principal=self.principal,
-                                  checkpoint=self.checkpoint)
+        framework = mesos_pb2.FrameworkInfo(user=self.user,
+                                            name=self.name,
+                                            principal=self.principal,
+                                            checkpoint=self.checkpoint)
         return framework
 
 
@@ -50,20 +108,20 @@ class Resources(object):
         return cls(**{pb.name: decode_typed_field(pb) for pb in pbs})
 
     def encode(self):
-        cpus = Resource(name='cpus', type=Value.SCALAR)
+        cpus = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
         cpus.scalar.value = self.cpus
 
-        mem = Resource(name='mem', type=Value.SCALAR)
+        mem = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
         mem.scalar.value = self.mem
 
-        disk = Resource(name='disk', type=Value.SCALAR)
+        disk = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
         disk.scalar.value = self.disk
 
-        ranges = [Value.Range(begin=b, end=e) for b, e in self.ports]
-        ports = Resource(name='ports', type=Value.RANGES)
-        ports.ranges.extend(ranges)
+        #ranges = [mesos_pb2.Value.Range(begin=b, end=e) for b, e in self.ports]
+        #ports = mesos_pb2.Resource(name='ports', type=mesos_pb2.Value.RANGES)
+        #ports.ranges.extend(ranges)
 
-        return [cpus, mem, disk, ports]
+        return [cpus, mem, disk]
 
     def __cmp__(self, other):
         this = (self.cpus, self.mem, self.disk)
@@ -135,23 +193,24 @@ class Docker(object):
         self.network = network
 
     def encode(self):
-        volumes = [Volume(host_path=host,
-                          container_path=container,
-                          mode=Volume.Mode.Value(mode.upper()))
+        volumes = [mesos_pb2.Volume(host_path=host,
+                                    container_path=container,
+                                    mode=Volume.Mode.Value(mode.upper()))
                    for host, container, mode in self.volumes]
 
-        docker = ContainerInfo.DockerInfo(image=self.image,
-                                          force_pull_image=self.force_pull,
-                                          network=DockerInfo.Network.Value(
-                                              self.network.upper()))
+        docker = mesos_pb2.ContainerInfo.DockerInfo(
+            image=self.image,
+            force_pull_image=self.force_pull,
+            network=mesos_pb2.DockerInfo.Network.Value(self.network.upper()))
 
-        container = ContainerInfo(type=ContainerInfo.DOCKER,
-                                  volumes=volumes,
-                                  docker=docker)
+        container = mesos_pb2.ContainerInfo(type=mesos_pb2.ContainerInfo.DOCKER,
+                                            volumes=volumes,
+                                            docker=docker)
 
         return container
 
 
+# SchedulerTask
 class Task(object):  # created manually, converted to TaskInfo
 
     def __init__(self, tid, name, resources, container=None):
@@ -163,13 +222,12 @@ class Task(object):  # created manually, converted to TaskInfo
     @classmethod
     def decode(cls, pb):
         return cls(**pb)
-        pass
 
     def encode(self, offer):
-        task = TaskInfo(name=self.name,
-                        task_id=TaskID(value=self.tid),
-                        slave_id=offer.slave_id,
-                        resources=self.resources.encode())
+        task = mesos_pb2.TaskInfo(name=self.name,
+                                  task_id=mesos_pb2.TaskID(value=self.tid),
+                                  slave_id=offer.slave_id,
+                                  resources=self.resources.encode())
         if self.container:
             task.container.MergeFrom(self.container.encode())
 
@@ -178,6 +236,20 @@ class Task(object):  # created manually, converted to TaskInfo
     def __cmp__(self, other):
         return self.resources.__cmp__(other.resources)
 
+    # executor side actions
+    def run(self, driver):
+        status = TaskStatus(tid=self.tid, state=mesos_pb2.TASK_RUNNING)
+        driver.update(status)
+
+    def fail(self, driver):
+        status = TaskStatus(tid=self.tid, state=mesos_pb2.TASK_FAILED)
+        driver.update(status)
+
+    def finish(self, driver):
+        status = TaskStatus(tid=self.tid, state=mesos_pb2.TASK_FINISHED)
+        driver.update(status)
+
+    # scheduler side events
     # def on_starting(scheduler, driver):
     #     pass
 
@@ -189,6 +261,31 @@ class Task(object):  # created manually, converted to TaskInfo
 
     # def on_finished(scheduler, driver):
     #     pass
+
+class Request(object):
+    pass
+
+class Slave(object):
+    pass
+
+class TaskStatus(object):
+
+    def __init__(self, tid, state, message=None, data=None):
+        self.tid = tid
+        self.state = state
+        self.message = message
+        self.data = data
+
+    @classmethod
+    def decode(cls, pb):
+        return cls(**pb)
+
+    def encode(self):
+        status = mesos_pb2.TaskStatus(task_id=mesos_pb2.TaskID(value=self.tid),
+                                      state=self.state,
+                                      message=self.message,
+                                      data=self.data)
+        return status
 
 
 class Command(Task):
@@ -204,14 +301,14 @@ class Command(Task):
         self.uris = uris
 
     def encode(self):
-        uris = [CommandInfo.URI(value=uri) for uri in self.uris]
-        envs = [Environment.Variable(name=k, value=v)
+        uris = [mesos_pb2.CommandInfo.URI(value=uri) for uri in self.uris]
+        envs = [mesos_pb2.Environment.Variable(name=k, value=v)
                 for k, v in self.envs.items()]
 
-        command = CommandInfo(value=self.cmd,
-                              arguments=self.args,
-                              environment=envs,
-                              uris=uris)
+        command = mesos_pb2.CommandInfo(value=self.cmd,
+                                        arguments=self.args,
+                                        environment=envs,
+                                        uris=uris)
 
         task = super(Command, self).encode()
         task.command.MergeFrom(command)

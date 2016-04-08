@@ -1,3 +1,23 @@
+class Test(Scheduler):
+
+    def match(self, offers):
+        return {} # mappings
+
+    def on_offers(self, driver, offers):
+        #print(driver)
+        #print(offers)
+
+        to_launch = self.match(offers)
+        to_decline = [o for o in offers if o not in to_launch]
+
+        for offer, tasks in to_launch.items():
+            driver.launch(offer, tasks, filters=None)  # filters?
+
+        for offer in to_decline:  # decline remaining unused offers
+            driver.decline(offer)
+
+
+
 import os
 from mesos.interface import mesos_pb2
 from satyr.config import Config

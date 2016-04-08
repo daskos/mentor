@@ -19,12 +19,10 @@ class Test(Scheduler):
         to_decline = [o for o in offers if o not in to_launch]
 
         for offer, tasks in to_launch.items():
-            driver.launch(offer, tasks, filters=None)  # filters?
+            driver.launch(offer.id, tasks, filters=None)  # filters?
 
         for offer in to_decline:  # decline remaining unused offers
-            driver.decline(offer)
-
-
+            driver.decline(offer.id)
 
 
 if __name__ == '__main__':

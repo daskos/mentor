@@ -1,9 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
-from protobuf_to_dict import protobuf_to_dict, dict_to_protobuf
-from mesos.interface import Executor, ExecutorDriver, mesos_pb2
 
-from .messages import ExecutorInfo, FrameworkInfo, SlaveInfo, TaskInfo, TaskID
+from mesos.interface import Executor, ExecutorDriver
+
+from .messages import encode, decode
 
 # testing these are pretty straightforward
 
@@ -20,43 +20,44 @@ class ExecutorProxy(Executor):
         self.executor = executor
 
     def registered(self, driver, executorInfo, frameworkInfo, slaveInfo):
-        driver = ExecutorDriverProxy(driver)
-        executor = ExecutorInfo(executorInfo)
-        framework = FrameworkInfo(frameworkInfo)
-        slave = SlaveInfo(slaveInfo)
-        return self.executor.on_registered(driver, executor, framework, slave)
+        logging.info('Registered with slave', extra=dict())
+        return self.executor.on_registered(ExecutorDriverProxy(driver),
+                                           decode(executorInfo),
+                                           decode(frameworkInfo),
+                                           decode(slaveInfo))
 
     def reregistered(self, driver, slaveInfo):
-        driver = ExecutorDriverProxy(driver)
-        slave = SlaveInfo(slaveInfo)
-        return self.executor.on_reregistered(driver, slave)
+        logging.info('Re-registered with slave', extra=dict())
+        return self.executor.on_reregistered(ExecutorDriverProxy(driver),
+                                             decode(slaveInfo))
 
     def disconnected(self, driver):
-        driver = ExecutorDriverProxy(driver)
-        return self.executor.on_disconnected(driver)
+        logging.info('Disconnected from slave')
+        return self.executor.on_disconnected(ExecutorDriverProxy(driver))
 
     def launchTask(self, driver, taskInfo):
-        driver = ExecutorDriverProxy(driver)
-        task = TaskInfo(taskInfo)
-        return self.executor.on_launch(driver, task)
+        logging.info('Launches task', extra=dict())
+        return self.executor.on_launch(ExecutorDriverProxy(driver),
+                                       decode(taskInfo))
 
     def killTask(self, driver, taskId):
-        driver = ExecutorDriverProxy(driver)
-        task_id = TaskID(taskId)
-        return self.executor.on_kill(driver, task_id)
+        logging.info('Kills task', extra=dict())
+        return self.executor.on_kill(ExecutorDriverProxy(driver),
+                                     decode(taskId))
 
     def frameworkMessage(self, driver, message):
-        driver = ExecutorDriverProxy(driver)
-        return self.executor.on_message(driver, message)
+        logging.info('Recived framework message', extra=dict())
+        return self.executor.on_message(ExecutorDriverProxy(driver),
+                                        message)
 
     def shutdown(self, driver):
-        driver = ExecutorDriverProxy(driver)
-        return self.executor.on_shutdown(driver)
+        logging.info('Executor shutdown')
+        return self.executor.on_shutdown(ExecutorDriverProxy(driver))
 
     def error(self, driver, message):
         print("Error from Mesos: %s" % message, file=sys.stderr)
-        driver = ExecutorDriverProxy(driver)
-        return self.executor.on_error(driver, message)
+        return self.executor.on_error(ExecutorDriverProxy(driver),
+                                      message)
 
 
 class ExecutorDriverProxy(object):
@@ -109,8 +110,7 @@ class ExecutorDriverProxy(object):
         See Scheduler.statusUpdate for more information about status update
         acknowledgements.
         """
-        status = status.encode()
-        return self.driver.sendStatusUpdate(status)
+        return self.driver.sendStatusUpdate(encode(status))
 
     def message(self, data):
         """Sends a message to the framework scheduler.

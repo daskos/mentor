@@ -5,21 +5,19 @@ import signal
 import sys
 import logging
 
-from protobuf_to_dict import dict_to_protobuf
-
+from mesos.native import MesosSchedulerDriver
 from mesos.interface import mesos_pb2
-from mesos.native import MesosSchedulerDriver, MesosExecutorDriver
 
-from .primitives import Framework
-from .proxies import SchedulerProxy, ExecutorProxy
-from .proxies.messages import Map
+from .proxies import SchedulerProxy
+from .proxies.messages import FrameworkInfo, encode
 
 
 class Scheduler(object):
 
+    # TODO envargs
     def __init__(self, name, user='', master='zk://localhost:2181/mesos',
                  *args, **kwargs):
-        self.framework = Map(name=name, user=user, **kwargs)
+        self.framework = FrameworkInfo(name=name, user=user, **kwargs)
         self.master = master
 
     def __call__(self, *args, **kwargs):
@@ -28,8 +26,8 @@ class Scheduler(object):
     def run(self):
         # TODO logging
         # TODO implicit aknoladgements
-        framework = dict_to_protobuf(mesos_pb2.FrameworkInfo, self.framework)
-        driver = MesosSchedulerDriver(SchedulerProxy(self), framework, self.master)
+
+        driver = MesosSchedulerDriver(SchedulerProxy(self), encode(self.framework), self.master)
         atexit.register(driver.stop)
 
         # run things

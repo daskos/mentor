@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 
 from .. import log as logging
+import sys
 
 from mesos.interface import Scheduler
 
@@ -38,7 +39,7 @@ class SchedulerProxy(Scheduler):
                                         map(decode, offers))
 
     def offerRescinded(self, driver, offerId):
-        logging.debug('Offer rescinded', extra=dict(offer_id=offer_id))
+        logging.debug('Offer rescinded', extra=dict(offer_id=offerId))
         return self.scheduler.on_rescinded(SchedulerDriverProxy(driver),
                                            decode(offerId))
 

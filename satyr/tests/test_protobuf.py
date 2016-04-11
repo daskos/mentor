@@ -1,12 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+import json
 import pytest
 
 from sample_pb2 import MessageOfTypes
 from satyr.protobuf import protobuf_to_dict, dict_to_protobuf
-import base64
 
-import json
 
 @pytest.fixture
 def m():
@@ -42,7 +41,7 @@ def compare(m, d, exclude=None):
             assert field.name in d, field.name
             assert d[field.name] == getattr(m, field.name), (field.name, d[field.name])
     assert i > 0
-    assert m.byts == base64.b64decode(d['byts'])
+    assert m.byts == str(d['byts'])
     assert d['nested'] == {'req': m.nested.req}
 
 
@@ -52,6 +51,7 @@ def test_basics(m):
 
     m2 = dict_to_protobuf(d, MessageOfTypes)
     assert m == m2
+
 
 def test_use_enum_labels(m):
     d = protobuf_to_dict(m)
@@ -74,6 +74,7 @@ def test_use_enum_labels(m):
     with pytest.raises(KeyError):
         dict_to_protobuf(d, MessageOfTypes)
 
+
 def test_repeated_enum(m):
     d = protobuf_to_dict(m)
     compare(m, d, ['nestedRepeated'])
@@ -86,6 +87,7 @@ def test_repeated_enum(m):
     with pytest.raises(KeyError):
         dict_to_protobuf(d, MessageOfTypes)
 
+
 def test_nested_repeated(m):
     m.nestedRepeated.extend([MessageOfTypes.NestedType(req=str(i)) for i in range(10)])
 
@@ -96,11 +98,13 @@ def test_nested_repeated(m):
     m2 = dict_to_protobuf(d, MessageOfTypes)
     assert m == m2
 
+
 def test_reverse(m):
     m2 = dict_to_protobuf(protobuf_to_dict(m), MessageOfTypes)
     assert m == m2
     m2.dubl = 0
     assert m2 != m
+
 
 def test_incomplete(m):
     d = protobuf_to_dict(m)
@@ -109,6 +113,7 @@ def test_incomplete(m):
     assert m2.dubl == 0
     assert m != m2
 
+
 def test_pass_instance(m):
     d = protobuf_to_dict(m)
     d['dubl'] = 1
@@ -116,12 +121,14 @@ def test_pass_instance(m):
     assert m is m2
     assert m.dubl == 1
 
+
 def test_container_mapping(m):
     class mapping(dict):
         pass
 
-    containers = [(MessageOfTypes(), dict),
-                  (MessageOfTypes.NestedType(), mapping)]
+    containers = [(MessageOfTypes.NestedType(), mapping),
+                  (MessageOfTypes(), dict)]
+
 
     m.nestedRepeated.extend([MessageOfTypes.NestedType(req='1')])
     d = protobuf_to_dict(m, containers=containers)
@@ -131,6 +138,7 @@ def test_container_mapping(m):
     assert isinstance(d['nested'], mapping)
     assert isinstance(m, MessageOfTypes)
     assert isinstance(m.nested, MessageOfTypes.NestedType)
+
 
 def test_conditional_container_mapping(m):
     class truedict(dict):

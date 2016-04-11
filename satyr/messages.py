@@ -5,10 +5,8 @@ import cloudpickle
 
 
 from mesos.interface import mesos_pb2
-from .proxies.messages import TaskInfo, ExecutorInfo, CommandInfo,
-from .proxies.message import Cpus, Mem, Disk
-
-
+from .proxies.messages import TaskInfo, ExecutorInfo, CommandInfo
+from .proxies.messages import Cpus, Mem, Disk
 
 
 class PythonTask(TaskInfo):

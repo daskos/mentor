@@ -28,7 +28,7 @@ TYPE_CALLABLE_MAP = {
     FieldDescriptor.TYPE_SFIXED64: int if six.PY3 else six.integer_types[1],
     FieldDescriptor.TYPE_BOOL: bool,
     FieldDescriptor.TYPE_STRING: six.text_type,
-    FieldDescriptor.TYPE_BYTES: str, #base64.b64encode,
+    FieldDescriptor.TYPE_BYTES: str,  # base64.b64encode,
     FieldDescriptor.TYPE_ENUM: int
 }
 

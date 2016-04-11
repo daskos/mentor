@@ -1,12 +1,12 @@
 import pytest
 
 from mesos.interface import mesos_pb2
-from satyr.proxies.messages import MessageProxy, FrameworkInfo, FrameworkID
+from satyr.proxies.messages import MessageProxy, FrameworkInfo, FrameworkID, decode
 
 
 def test_framework_info():
     message = mesos_pb2.FrameworkInfo(id=mesos_pb2.FrameworkID(value='test'))
-    wrapped = FrameworkInfo.decode(message)
+    wrapped = decode(message)
 
     assert isinstance(wrapped, MessageProxy)
     assert isinstance(wrapped, FrameworkInfo)

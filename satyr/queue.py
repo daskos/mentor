@@ -1,6 +1,7 @@
 from collections import deque
-from kazoo.recipe.queue import Queue as KazooQueue
+
 from kazoo.recipe.queue import LockingQueue as KazooLockingQueue
+from kazoo.recipe.queue import Queue as KazooQueue
 
 
 class Queue(deque):
@@ -35,7 +36,7 @@ class SerializeMixin(object):
         self.client = client
 
 
-#class Queue(KazooQueue, SerializeMixin):
+# class Queue(KazooQueue, SerializeMixin):
 #    pass
 
 

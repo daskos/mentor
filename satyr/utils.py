@@ -1,21 +1,22 @@
 from __future__ import absolute_import, division, print_function
 
-
-from toolz import curry
-from functools import wraps
-import inspect
-import logging
 import atexit
-import signal
-import time
-import os
-import sys
-import multiprocessing as mp
-import logging
+import inspect
 import json
+import logging
+import multiprocessing as mp
+import os
+import signal
+import sys
+import time
+from functools import wraps
+
 from colorlog import ColoredFormatter
+from toolz import curry
+
 
 #from . import log as logging
+
 
 @curry
 def envargs(fn, prefix='', envs=os.environ):
@@ -116,6 +117,7 @@ def configure_logging(add_handler, log):
         return record
 
     class ColoredJsonFormatter(ColoredFormatter):
+
         def format(self, record):
             record = _json_format(record)
             return super(ColoredJsonFormatter, self).format(record)
@@ -140,6 +142,7 @@ def add_zmq_log_handler(address):
     import zmq.log.handlers
 
     class JSONPubHandler(zmq.log.handlers.PUBHandler):
+
         def format(self, record):
             return json.dumps(record.__dict__)
 

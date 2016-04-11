@@ -1,7 +1,5 @@
-import pytest
-
 from mesos.interface import mesos_pb2
-from satyr.proxies import ExecutorProxy, ExecutorDriverProxy
+from satyr.proxies import ExecutorDriverProxy, ExecutorProxy
 
 
 def test_event_handlers_with_wrapped_arguments(mocker):

@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+from functools import partial
+
 from google.protobuf.message import Message
 from mesos.interface import mesos_pb2
-import cloudpickle
 
 from .. import protobuf
-from functools import partial
 
 
 class Map(dict):
@@ -40,7 +40,6 @@ class Map(dict):
         return hash(frozenset(self))
 
 
-
 class RegisterProxies(type):
 
     def __init__(cls, name, bases, nmspc):
@@ -48,7 +47,7 @@ class RegisterProxies(type):
         if not hasattr(cls, 'registry'):
             cls.registry = []
         cls.registry.insert(0, (cls.proto, cls))
-        #cls.registry -= set(bases) # Remove base classes
+        # cls.registry -= set(bases) # Remove base classes
 
     # Metamethods, called on class objects:
     def __iter__(cls):
@@ -115,6 +114,7 @@ class ResourcesMixin(object):
     #     mem = self.mem - other.mem
     #     return Resources(cpus=cpus, mem=mem, disk=disk, ports=ports)
 
+
 class Resource(MessageProxy):
     proto = mesos_pb2.Resource
 
@@ -123,50 +123,66 @@ class Resource(MessageProxy):
         if value is not None:
             self.scalar.value = value
 
+
 class Cpus(Resource):
     proto = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
+
 
 class Mem(Resource):
     proto = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
 
+
 class Disk(Resource):
     proto = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
+
 
 class FrameworkID(MessageProxy):
     proto = mesos_pb2.FrameworkID
 
+
 class SlaveID(MessageProxy):
     proto = mesos_pb2.SlaveID
+
 
 class ExecutorID(MessageProxy):
     proto = mesos_pb2.ExecutorID
 
+
 class OfferID(MessageProxy):
     proto = mesos_pb2.OfferID
+
 
 class TaskID(MessageProxy):
     proto = mesos_pb2.TaskID
 
+
 class FrameworkInfo(MessageProxy):
     proto = mesos_pb2.FrameworkInfo
+
 
 class ExecutorInfo(MessageProxy):
     proto = mesos_pb2.ExecutorInfo
 
+
 class MasterInfo(MessageProxy):
     proto = mesos_pb2.MasterInfo
+
 
 class SlaveInfo(MessageProxy):
     proto = mesos_pb2.SlaveInfo
 
+
 class Filters(MessageProxy):
     proto = mesos_pb2.Filters
+
 
 class TaskStatus(MessageProxy):
     proto = mesos_pb2.TaskStatus
 
+
 class Offer(MessageProxy, ResourcesMixin):
     proto = mesos_pb2.Offer
+
 
 class TaskInfo(MessageProxy, ResourcesMixin):
     proto = mesos_pb2.TaskInfo
@@ -175,8 +191,10 @@ class TaskInfo(MessageProxy, ResourcesMixin):
         return TaskStatus(task_id=self.id, state=state, message=message,
                           data=data)
 
+
 class CommandInfo(MessageProxy):
     proto = mesos_pb2.CommandInfo
+
 
 class ContainerInfo(MessageProxy):
     proto = mesos_pb2.ContainerInfo

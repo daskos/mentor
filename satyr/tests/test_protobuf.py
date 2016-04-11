@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import json
-import pytest
 
+import pytest
 from sample_pb2 import MessageOfTypes
-from satyr.protobuf import protobuf_to_dict, dict_to_protobuf
+from satyr.protobuf import dict_to_protobuf, protobuf_to_dict
 
 
 @pytest.fixture
@@ -12,8 +12,8 @@ def m():
     m = MessageOfTypes()
     m.dubl = 1.7e+308
     m.flot = 3.4e+038
-    m.i32 = 2 ** 31 - 1 # 2147483647 #
-    m.i64 = 2 ** 63 - 1 #0x7FFFFFFFFFFFFFFF
+    m.i32 = 2 ** 31 - 1  # 2147483647 #
+    m.i64 = 2 ** 63 - 1  # 0x7FFFFFFFFFFFFFFF
     m.ui32 = 2 ** 32 - 1
     m.ui64 = 2 ** 64 - 1
     m.si32 = -1 * m.i32
@@ -27,7 +27,7 @@ def m():
     m.byts = b'\n\x14\x1e'
     assert len(m.byts) == 3, len(m.byts)
     m.nested.req = "req"
-    m.enm = MessageOfTypes.C #@UndefinedVariable
+    m.enm = MessageOfTypes.C  # @UndefinedVariable
     m.enmRepeated.extend([MessageOfTypes.A, MessageOfTypes.C])
     m.range.extend(range(10))
     return m
@@ -36,10 +36,11 @@ def m():
 def compare(m, d, exclude=None):
     i = 0
     exclude = ['byts', 'nested', 'enm', 'enmRepeated'] + (exclude or [])
-    for i, field in enumerate(MessageOfTypes.DESCRIPTOR.fields): #@UndefinedVariable
+    for i, field in enumerate(MessageOfTypes.DESCRIPTOR.fields):  # @UndefinedVariable
         if field.name not in exclude:
             assert field.name in d, field.name
-            assert d[field.name] == getattr(m, field.name), (field.name, d[field.name])
+            assert d[field.name] == getattr(
+                m, field.name), (field.name, d[field.name])
     assert i > 0
     assert m.byts == str(d['byts'])
     assert d['nested'] == {'req': m.nested.req}
@@ -89,7 +90,8 @@ def test_repeated_enum(m):
 
 
 def test_nested_repeated(m):
-    m.nestedRepeated.extend([MessageOfTypes.NestedType(req=str(i)) for i in range(10)])
+    m.nestedRepeated.extend(
+        [MessageOfTypes.NestedType(req=str(i)) for i in range(10)])
 
     d = protobuf_to_dict(m)
     compare(m, d, exclude=['nestedRepeated'])
@@ -128,7 +130,6 @@ def test_container_mapping(m):
 
     containers = [(MessageOfTypes.NestedType(), mapping),
                   (MessageOfTypes(), dict)]
-
 
     m.nestedRepeated.extend([MessageOfTypes.NestedType(req='1')])
     d = protobuf_to_dict(m, containers=containers)

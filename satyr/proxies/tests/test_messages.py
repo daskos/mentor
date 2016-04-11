@@ -1,7 +1,7 @@
 import pytest
-
 from mesos.interface import mesos_pb2
-from satyr.proxies.messages import MessageProxy, FrameworkInfo, FrameworkID, decode
+from satyr.proxies.messages import (FrameworkID, FrameworkInfo, MessageProxy,
+                                    decode)
 
 
 def test_framework_info():

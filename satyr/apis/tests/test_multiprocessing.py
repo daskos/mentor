@@ -1,13 +1,14 @@
 import pytest
-
-from satyr.multiprocessing import apply_async, AsyncResult
+from satyr.multiprocessing import AsyncResult, apply_async
 
 
 def add(a, b):
     return a + b
 
+
 def mul(a, b):
     return a * b
+
 
 def feed(x, queue):
     queue.put(x)

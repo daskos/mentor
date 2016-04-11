@@ -1,16 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
 import atexit
-import signal
 import sys
 
-from . import log as logging
-
-from mesos.native import MesosSchedulerDriver
 from mesos.interface import mesos_pb2
+from mesos.native import MesosSchedulerDriver
 
+from . import log as logging
 from .proxies import SchedulerProxy
 from .proxies.messages import FrameworkInfo, encode
+
 
 class Scheduler(object):
 

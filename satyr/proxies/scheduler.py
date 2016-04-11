@@ -1,17 +1,17 @@
 from __future__ import absolute_import, division, print_function
 
-
-from .. import log as logging
 import sys
 
 from mesos.interface import Scheduler
+
+from .. import log as logging
+from .messages import Filters, decode, encode
+
 
 # test these classes with mocking the wrapped ones
 
 # TODO add logging to all methods
 
-
-from .messages import encode, decode, Filters
 
 class SchedulerProxy(Scheduler):
 
@@ -34,7 +34,8 @@ class SchedulerProxy(Scheduler):
         return self.scheduler.on_disconnected(SchedulerDriverProxy(driver))
 
     def resourceOffers(self, driver, offers):
-        logging.debug("Got resource offers", extra=dict(num_offers=len(offers)))
+        logging.debug("Got resource offers",
+                      extra=dict(num_offers=len(offers)))
         return self.scheduler.on_offers(SchedulerDriverProxy(driver),
                                         map(decode, offers))
 
@@ -138,7 +139,7 @@ class SchedulerDriverProxy(object):
         within the Scheduler::resourceOffers callback.
         """
         return self.driver.declineOffer(encode(offer_id),
-                                        encode(filters))  #TODO filters
+                                        encode(filters))  # TODO filters
 
     def accept(self, offer_ids, operations, filters=None):
         """Accepts the given offers and performs a sequence of operations

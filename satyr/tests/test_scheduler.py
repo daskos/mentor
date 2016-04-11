@@ -1,11 +1,11 @@
 class Test(Scheduler):
 
     def match(self, offers):
-        return {} # mappings
+        return {}  # mappings
 
     def on_offers(self, driver, offers):
-        #print(driver)
-        #print(offers)
+        # print(driver)
+        # print(offers)
 
         to_launch = self.match(offers)
         to_decline = [o for o in offers if o not in to_launch]
@@ -17,8 +17,8 @@ class Test(Scheduler):
             driver.decline(offer)
 
 
-
 import os
+
 from mesos.interface import mesos_pb2
 from satyr.config import Config
 from satyr.executor import SatyrExecutor
@@ -35,10 +35,6 @@ config = Config(conf={
     'permanent': False,
     'command': 'python %s/example.py' % os.path.dirname(os.path.realpath(__file__))
 })
-
-
-
-
 
 
 def run_on_scheduler(scheduler, driver, executorId, slaveId, data):

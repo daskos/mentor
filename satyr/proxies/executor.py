@@ -1,15 +1,19 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-from .. import log as logging
+
 from mesos.interface import Executor, ExecutorDriver
 
-from .messages import encode, decode
+from .. import log as logging
+from .messages import decode, encode
+
 
 # testing these are pretty straightforward
 
 # decode entities in every fn
 # TODO: logging
+
+
 class ExecutorProxy(Executor):
     """Base class for Mesos executors.
 

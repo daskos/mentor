@@ -3,11 +3,11 @@ from __future__ import absolute_import, division, print_function
 import atexit
 import signal
 import sys
-from . import log as logging
 
-from mesos.native import MesosExecutorDriver
 from mesos.interface import mesos_pb2
+from mesos.native import MesosExecutorDriver
 
+from . import log as logging
 from .proxies import ExecutorProxy
 from .proxies.messages import encode
 
@@ -32,7 +32,6 @@ class Executor(object):
         status = 0 if driver.run() == mesos_pb2.DRIVER_STOPPED else 1
         driver.stop()  # Ensure that the driver process terminates.
         sys.exit(status)
-
 
     def on_registered(self, driver, executor, framework, slave):
         """Event handler triggered when the executor driver has been able to

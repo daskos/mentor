@@ -1,16 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
 from uuid import uuid4
+
 import cloudpickle
-
-
 from mesos.interface import mesos_pb2
-from .proxies.messages import TaskInfo, ExecutorInfo, CommandInfo
-from .proxies.messages import Cpus, Mem, Disk
+
+from .proxies.messages import Cpus, Disk, Mem, TaskInfo
 
 
 class PythonTask(TaskInfo):
-    #proto = mesos_pb2.TaskInfo(labels=mesos_pb2.Labels(
+    # proto = mesos_pb2.TaskInfo(labels=mesos_pb2.Labels(
     #    labels=[mesos_pb2.Label(key='python')])
     proto = mesos_pb2.TaskInfo(name='python-task')
 

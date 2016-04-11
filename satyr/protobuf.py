@@ -1,13 +1,12 @@
 from __future__ import absolute_import, division, print_function
-import base64
 
-import six
+import base64
 from copy import copy
 from functools import partial
 
-from google.protobuf.message import Message
+import six
 from google.protobuf.descriptor import FieldDescriptor
-
+from google.protobuf.message import Message
 
 __all__ = ["protobuf_to_dict", "TYPE_CALLABLE_MAP", "dict_to_protobuf",
            "REVERSE_TYPE_CALLABLE_MAP"]
@@ -33,7 +32,7 @@ TYPE_CALLABLE_MAP = {
 }
 
 REVERSE_TYPE_CALLABLE_MAP = {
-    #FieldDescriptor.TYPE_BYTES: base64.b64decode
+    # FieldDescriptor.TYPE_BYTES: base64.b64decode
 }
 
 CONTAINER_MAP = []
@@ -42,9 +41,11 @@ CONTAINER_MAP = []
 def enum_to_label(field, value):
     return field.enum_type.values_by_number[int(value)].name
 
+
 def label_to_enum(field, value):
     enum_dict = field.enum_type.values_by_name
     return enum_dict[value].number
+
 
 def message_to_container(message, containers):
     for msg, cnt in containers:
@@ -57,6 +58,7 @@ def message_to_container(message, containers):
                 return cnt()
     return dict()  # fallback to plain dictionary
 
+
 def container_to_message(container, containers):
     for msg, cnt in containers:
         if isinstance(container, cnt):
@@ -65,12 +67,13 @@ def container_to_message(container, containers):
             else:
                 return copy(msg)
 
+
 def protobuf_to_dict(pb, containers=CONTAINER_MAP, converters=TYPE_CALLABLE_MAP):
     result = message_to_container(pb, containers)
 
     for field, value in pb.ListFields():
         if (field.message_type and field.message_type.has_options and
-            field.message_type.GetOptions().map_entry):
+                field.message_type.GetOptions().map_entry):
             converter = dict
         elif field.type == FieldDescriptor.TYPE_MESSAGE:
             # recursively encode protobuf sub-message
@@ -88,6 +91,7 @@ def protobuf_to_dict(pb, containers=CONTAINER_MAP, converters=TYPE_CALLABLE_MAP)
 
     return result
 
+
 def dict_to_protobuf(dct, pb=None, containers=CONTAINER_MAP,
                      converters=REVERSE_TYPE_CALLABLE_MAP):
     default = container_to_message(dct, containers)
@@ -104,7 +108,8 @@ def dict_to_protobuf(dct, pb=None, containers=CONTAINER_MAP,
         if field.label == FieldDescriptor.LABEL_REPEATED:
             for item in v:
                 if field.type == FieldDescriptor.TYPE_MESSAGE:
-                    dict_to_protobuf(item, pb_value.add(), containers, converters)
+                    dict_to_protobuf(item, pb_value.add(),
+                                     containers, converters)
                 elif field.type == FieldDescriptor.TYPE_ENUM:
                     pb_value.append(label_to_enum(field, item))
                 else:

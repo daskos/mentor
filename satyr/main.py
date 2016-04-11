@@ -1,7 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
-from .scheduler import Scheduler
+from time import sleep
+
 from .executor import Executor
+from .messages import PythonTask
+from .proxies.messages import encode
+from .scheduler import Scheduler
 from .utils import catch, run_daemon
 
 
@@ -41,16 +45,14 @@ from .utils import catch, run_daemon
 # def fn(queue):
 #     queue.put("anyad-picsaja")
 
-# first = Task(command=cmd, cpu=1, mem=128, image="python:2-alpine")  # command executor
+# first = Task(command=cmd, cpu=1, mem=128, image="python:2-alpine")  #
+# command executor
 
-# second = Task(callback=fn, args=[results], cpu=1, mem=128, image="python:2-alpine")  # pickled executor
+# second = Task(callback=fn, args=[results], cpu=1, mem=128,
+# image="python:2-alpine")  # pickled executor
 
 
 # tasks.put(first)
-
-from .proxies.messages import encode
-from .messages import PythonTask
-from time import sleep
 
 
 class TestScheduler(Scheduler):
@@ -59,28 +61,24 @@ class TestScheduler(Scheduler):
         #to_launch = self.match(offers)
         #to_decline = [o for o in offers if o not in to_launch]
 
-        #print(offers[0].ports)
+        # print(offers[0].ports)
 
         def pina():
             sleep(10)
             return 10
 
-
         task = PythonTask(fn=pina, tid='test-id')
-        #print(encode(task))
-
-
+        # print(encode(task))
 
         for offer in offers:
             if offer > task:
                 task.slave_id = offer.slave_id
-                #print(encode(offer.id))
-                #print(encode(task))
-                #print(encode(Filters()))
+                # print(encode(offer.id))
+                # print(encode(task))
+                # print(encode(Filters()))
                 driver.launch(offer.id, [task])
             else:
                 driver.decline(offer.id)
-
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from google.protobuf.message import Message
 from mesos.interface import mesos_pb2
+import cloudpickle
 
 from .. import protobuf
 from functools import partial
@@ -13,14 +14,31 @@ class Map(dict):
         mapping = mapping or kwargs
         for k, v in mapping.items():
             if isinstance(v, dict):
-                mapping[k] = Map(v)
+                mapping[k] = Map(mapping=v)
             elif hasattr(v, '__iter__'):
-                mapping[k] = map(Map, v)
+                mapping[k] = [Map(mapping=i) for i in v]
         super(Map, self).__init__(mapping)
-        self.__dict__ = self
+        #self.__dict__ = self
+
+    def __getattr__(self, name):
+        return self[name]
+
+    def __setattr__(self, name, value):
+        self[name] = value
+
+    def __delattr__(self, name):
+        if name in self:
+            del self[name]
+        else:
+            raise AttributeError('No such attribute: {}'.format(name))
+
+    def __missing__(self, name):
+        self[name] = Map()
+        return self[name]
 
     def __hash__(self):
         return hash(frozenset(self))
+
 
 
 class RegisterProxies(type):
@@ -97,6 +115,22 @@ class ResourcesMixin(object):
     #     mem = self.mem - other.mem
     #     return Resources(cpus=cpus, mem=mem, disk=disk, ports=ports)
 
+class Resource(MessageProxy):
+    proto = mesos_pb2.Resource
+
+    def __init__(self, value=None, **kwargs):
+        super(Resource, self).__init__(**kwargs)
+        if value is not None:
+            self.scalar.value = value
+
+class Cpus(Resource):
+    proto = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
+
+class Mem(Resource):
+    proto = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
+
+class Disk(Resource):
+    proto = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
 
 class FrameworkID(MessageProxy):
     proto = mesos_pb2.FrameworkID
@@ -136,6 +170,10 @@ class Offer(MessageProxy, ResourcesMixin):
 
 class TaskInfo(MessageProxy, ResourcesMixin):
     proto = mesos_pb2.TaskInfo
+
+    def status(self, state, message='', data=None):
+        return TaskStatus(task_id=self.id, state=state, message=message,
+                          data=data)
 
 class CommandInfo(MessageProxy):
     proto = mesos_pb2.CommandInfo

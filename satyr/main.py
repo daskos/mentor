@@ -1,8 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-
-
 from .scheduler import Scheduler
+from .executor import Executor
 from .utils import catch, run_daemon
 
 
@@ -49,12 +48,12 @@ from .utils import catch, run_daemon
 
 # tasks.put(first)
 
-from .proxies.messages import TaskInfo, encode, Filters
+from .proxies.messages import encode
+from .messages import PythonTask
+from time import sleep
 
-class Test(Scheduler):
 
-    def match(self, offers):
-        return {} # mappings
+class TestScheduler(Scheduler):
 
     def on_offers(self, driver, offers):
         #to_launch = self.match(offers)
@@ -62,16 +61,22 @@ class Test(Scheduler):
 
         #print(offers[0].ports)
 
-        task = TaskInfo(name='test', task_id={'value': 'test-id'}, resources=[
-            {'name': 'cpu', 'scalar': {'value': 1.0}, 'type': 'SCALAR'},
-            {'name': 'mem', 'scalar': {'value': 64}, 'type': 'SCALAR'}])
+        def pina():
+            sleep(10)
+            return 10
+
+
+        task = PythonTask(fn=pina, tid='test-id')
+        #print(encode(task))
+
+
 
         for offer in offers:
             if offer > task:
                 task.slave_id = offer.slave_id
-                print(encode(offer.id))
-                print(encode(task))
-                print(encode(Filters()))
+                #print(encode(offer.id))
+                #print(encode(task))
+                #print(encode(Filters()))
                 driver.launch(offer.id, [task])
             else:
                 driver.decline(offer.id)
@@ -79,5 +84,5 @@ class Test(Scheduler):
 
 
 if __name__ == '__main__':
-    fw = Test(name='pinasen')
+    fw = TestScheduler(name='pinasen')
     run_daemon('Mesos Test Framework', fw)

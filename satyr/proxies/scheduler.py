@@ -43,7 +43,8 @@ class SchedulerProxy(Scheduler):
                                            decode(offerId))
 
     def statusUpdate(self, driver, status):
-        logging.debug('Status update received')
+        logging.debug('Status update received', extra=dict(
+            state=status.state, description=status.message))
         return self.scheduler.on_update(SchedulerDriverProxy(driver),
                                         decode(status))
 

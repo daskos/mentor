@@ -116,12 +116,12 @@ def test_pass_instance(m):
     assert m is m2
     assert m.dubl == 1
 
-def test_containers(m):
+def test_container_mapping(m):
     class mapping(dict):
         pass
 
-    containers = [(MessageOfTypes, dict),
-                  (MessageOfTypes.NestedType, mapping)]
+    containers = [(MessageOfTypes(), dict),
+                  (MessageOfTypes.NestedType(), mapping)]
 
     m.nestedRepeated.extend([MessageOfTypes.NestedType(req='1')])
     d = protobuf_to_dict(m, containers=containers)
@@ -131,3 +131,28 @@ def test_containers(m):
     assert isinstance(d['nested'], mapping)
     assert isinstance(m, MessageOfTypes)
     assert isinstance(m.nested, MessageOfTypes.NestedType)
+
+def test_conditional_container_mapping(m):
+    class truedict(dict):
+        pass
+
+    class falsedict(dict):
+        pass
+
+    containers = [(MessageOfTypes(bol=True), truedict),
+                  (MessageOfTypes(bol=False), falsedict),
+                  (MessageOfTypes.NestedType(), dict)]
+
+    m.bol = True
+    d = protobuf_to_dict(m, containers=containers)
+    p = dict_to_protobuf(d, containers=containers)
+
+    assert isinstance(d, truedict)
+    assert isinstance(p, MessageOfTypes)
+
+    m.bol = False
+    d = protobuf_to_dict(m, containers=containers)
+    p = dict_to_protobuf(d, containers=containers)
+
+    assert isinstance(d, falsedict)
+    assert isinstance(p, MessageOfTypes)

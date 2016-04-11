@@ -3,19 +3,16 @@ from __future__ import absolute_import, division, print_function
 import atexit
 import signal
 import sys
-import logging
+from . import log as logging
 
-from protobuf_to_dict import dict_to_protobuf
-
+from mesos.native import MesosExecutorDriver
 from mesos.interface import mesos_pb2
-from mesos.native import MesosSchedulerDriver, MesosExecutorDriver
 
-from .primitives import Framework
-from .proxies import SchedulerProxy, ExecutorProxy
-from .proxies.messages import Map
+from .proxies import ExecutorProxy
+from .proxies.messages import encode
 
 
-class Executor(ExecutorProxy):
+class Executor(object):
 
     """Base class for Mesos executors.
 
@@ -23,12 +20,11 @@ class Executor(ExecutorProxy):
     methods they don't override.
     """
 
-    def __call__(self, *args, **kwargs):
-        return self.run()  # TODO pass args
+    def __call__(self):
+        return self.run()
 
     def run(self):
         # TODO logging
-        # TODO implicit aknoladgements
         driver = MesosExecutorDriver(ExecutorProxy(self))
         atexit.register(driver.stop)
 
@@ -99,7 +95,18 @@ class Executor(ExecutorProxy):
         task: Task
             TODO: write docs
         """
-        pass
+        def run_task():
+            driver.update(task.status('TASK_RUNNING'))
+
+            try:
+                result = task()
+            except Exception as e:
+                driver.update(task.status('TASK_FAILED', message=e.message))
+            else:
+                driver.update(task.status('TASK_FINISHED', data=result))
+
+        thread = threading.Thread(target=run_task)
+        thread.start()
 
     def on_kill(self, driver, task_id):
         """Event handler triggered when a task running within this executor has
@@ -164,3 +171,7 @@ class Executor(ExecutorProxy):
             Arbitrary byte stream
         """
         pass
+
+
+if __name__ == '__main__':
+    Executor().run()

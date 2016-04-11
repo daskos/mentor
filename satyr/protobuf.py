@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 import base64
 
 import six
+from copy import copy
 from functools import partial
 
 from google.protobuf.message import Message
@@ -27,15 +28,15 @@ TYPE_CALLABLE_MAP = {
     FieldDescriptor.TYPE_SFIXED64: int if six.PY3 else six.integer_types[1],
     FieldDescriptor.TYPE_BOOL: bool,
     FieldDescriptor.TYPE_STRING: six.text_type,
-    FieldDescriptor.TYPE_BYTES: base64.b64encode,
+    FieldDescriptor.TYPE_BYTES: str, #base64.b64encode,
     FieldDescriptor.TYPE_ENUM: int
 }
 
 REVERSE_TYPE_CALLABLE_MAP = {
-    FieldDescriptor.TYPE_BYTES: base64.b64decode
+    #FieldDescriptor.TYPE_BYTES: base64.b64decode
 }
 
-CONTAINER_MAP = [(Message, dict)]
+CONTAINER_MAP = []
 
 
 def enum_to_label(field, value):
@@ -47,13 +48,22 @@ def label_to_enum(field, value):
 
 def message_to_container(message, containers):
     for msg, cnt in containers:
-        if isinstance(message, msg):
-            return cnt()
+        if isinstance(msg, type):  # class definition used
+            if isinstance(message, msg):
+                return cnt()
+        elif isinstance(message, msg.__class__):  # object definition used
+            if all([getattr(msg, field.name) == getattr(message, field.name)
+                    for field, value in msg.ListFields()]):
+                return cnt()
+    return dict()  # fallback to plain dictionary
 
 def container_to_message(container, containers):
     for msg, cnt in containers:
         if isinstance(container, cnt):
-            return msg()
+            if isinstance(msg, type):
+                return msg()
+            else:
+                return copy(msg)
 
 def protobuf_to_dict(pb, containers=CONTAINER_MAP, converters=TYPE_CALLABLE_MAP):
     result = message_to_container(pb, containers)
@@ -80,7 +90,12 @@ def protobuf_to_dict(pb, containers=CONTAINER_MAP, converters=TYPE_CALLABLE_MAP)
 
 def dict_to_protobuf(dct, pb=None, containers=CONTAINER_MAP,
                      converters=REVERSE_TYPE_CALLABLE_MAP):
-    pb = pb or container_to_message(dct, containers)
+    default = container_to_message(dct, containers)
+    if pb:
+        if default:
+            pb.MergeFrom(default)
+    else:
+        pb = default
     pb = pb if isinstance(pb, Message) else pb()
 
     for k, v in dct.items():

@@ -3,14 +3,14 @@ from __future__ import absolute_import, division, print_function
 import atexit
 import signal
 import sys
-import logging
+
+from . import log as logging
 
 from mesos.native import MesosSchedulerDriver
 from mesos.interface import mesos_pb2
 
 from .proxies import SchedulerProxy
 from .proxies.messages import FrameworkInfo, encode
-
 
 class Scheduler(object):
 
@@ -20,14 +20,16 @@ class Scheduler(object):
         self.framework = FrameworkInfo(name=name, user=user, **kwargs)
         self.master = master
 
-    def __call__(self, *args, **kwargs):
-        return self.run()  # TODO pass args
+    def __call__(self):
+        return self.run()
 
     def run(self):
         # TODO logging
         # TODO implicit aknoladgements
 
-        driver = MesosSchedulerDriver(SchedulerProxy(self), encode(self.framework), self.master)
+        driver = MesosSchedulerDriver(SchedulerProxy(self),
+                                      encode(self.framework),
+                                      self.master)
         atexit.register(driver.stop)
 
         # run things
@@ -109,7 +111,9 @@ class Scheduler(object):
         offers: list of Offer
             Resource offer instances
         """
-        pass
+        for offer in offers:
+            logging.info('Offer {} declined'.format(offer.id))
+            driver.decline(offer.id)
 
     def on_rescinded(driver, offer_id):
         """Event handler triggered when an offer is no longer valid.
@@ -229,3 +233,10 @@ class Scheduler(object):
             Arbitrary byte stream
         """
         pass
+
+
+if __name__ == '__main__':
+    from .utils import run_daemon
+
+    scheduler = Scheduler(name='Base')
+    run_daemon('Scheduler Process', scheduler)

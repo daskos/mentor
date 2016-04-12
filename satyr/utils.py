@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-import atexit
+# import atexit
+# from . import log as logging
 import inspect
 import json
 import logging
@@ -9,13 +10,11 @@ import os
 import signal
 import sys
 import time
+from copy import copy
 from functools import wraps
 
 from colorlog import ColoredFormatter
 from toolz import curry
-
-
-#from . import log as logging
 
 
 @curry
@@ -38,7 +37,8 @@ def envargs(fn, prefix='', envs=os.environ):
 
 
 def catch(func, exception_sender):
-    """Closure that calls given func.  If an error is raised, send it somewhere
+    """Closure that calls given func, if an error is raised, send it somewhere.
+
     `func` function to call
     `exception_sender` a writable end of a multiprocessing.Pipe
     """
@@ -84,8 +84,8 @@ def run_daemon(name, target, kwargs=dict()):
                           'exception', extra=dict(is_alive=subproc.is_alive()))
             break
         if not subproc.is_alive():
-            logging.error('Mesos Scheduler died and didn\'t notify me of its '
-                          'exception. This may be a code bug. Check logs.',
+            logging.error('Daemon process died and didn\'t notify me of its '
+                          'exception. This may be a code bug. Check logs!',
                           extra=dict())
             break
         # save cpu cycles by checking for subprocess failures less often

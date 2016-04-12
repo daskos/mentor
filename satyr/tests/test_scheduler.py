@@ -1,62 +1,54 @@
-class Test(Scheduler):
+import pytest
+from satyr.proxies.messages import CommandInfo, Cpus, Mem, TaskID, TaskInfo
+from satyr.scheduler import Scheduler
 
-    def match(self, offers):
-        return {}  # mappings
+
+class SingleTaskScheduler(Scheduler):
+
+    def __init__(self, task, *args, **kwargs):
+        self.ready = task
+        self.running = None
+        super(SingleTaskScheduler, self).__init__(*args, **kwargs)
 
     def on_offers(self, driver, offers):
-        # print(driver)
-        # print(offers)
+        if self.ready:
+            for offer in offers:
+                if offer > self.ready:
+                    self.ready.slave_id = offer.slave_id
+                    driver.launch(offer.id, [self.ready])
+                    self.running = self.ready
+                    self.ready = None
+                else:
+                    driver.decline(offer.id)
 
-        to_launch = self.match(offers)
-        to_decline = [o for o in offers if o not in to_launch]
-
-        for offer, tasks in to_launch.items():
-            driver.launch(offer, tasks, filters=None)  # filters?
-
-        for offer in to_decline:  # decline remaining unused offers
-            driver.decline(offer)
-
-
-import os
-
-from mesos.interface import mesos_pb2
-from satyr.config import Config
-from satyr.executor import SatyrExecutor
-from satyr.scheduler import SatyrScheduler
-
-config = Config(conf={
-    'id': 'satyr',
-    'name': 'Satyr',
-    'resources': {'cpus': 0.1, 'mem': 128},
-    'max_tasks': 10,
-    'master': '192.168.1.80:5050',
-    'user': 'nagyz',
-    'filter_refuse_seconds': 10,
-    'permanent': False,
-    'command': 'python %s/example.py' % os.path.dirname(os.path.realpath(__file__))
-})
+    def on_update(self, driver, status):
+        if status.state == 'TASK_FINISHED':
+            self.running = None
+        if not self.ready and not self.running:
+            driver.stop()
 
 
-def run_on_scheduler(scheduler, driver, executorId, slaveId, data):
-    print data
+@pytest.fixture
+def task():
+    task = TaskInfo(name='test-task',
+                    task_id=TaskID(value='test-task-id'),
+                    resources=[Cpus(0.1), Mem(16)],
+                    command=CommandInfo(value='echo 100'))
+    return task
 
 
-def run_on_executor(executor, driver, task):
-    executor.send_status_update(driver, task, mesos_pb2.TASK_RUNNING)
-    executor.send_framework_message(driver, 'Sleep!')
-    print 'sleeping...'
-    time.sleep(3)
-    executor.send_framework_message(driver, 'Wake up!')
-    executor.send_status_update(driver, task, mesos_pb2.TASK_FINISHED)
+def test_state_transitions(mocker, task):
+    sched = SingleTaskScheduler(name='test-scheduler', task=task)
+    mocker.spy(sched, 'on_update')
+    sched.run()
 
+    calls = sched.on_update.call_args_list
+    assert len(calls) == 2
 
-def test_run():
-    s = SatyrScheduler(config, run_on_scheduler)
-    s.add_job({'cmd': 'echo 1'})
-    s.run()
+    args, kwargs = calls[0]
+    assert args[1].task_id.value == 'test-task-id'
+    assert args[1].state == 'TASK_RUNNING'
 
-    # # With name it runs the scheduler otherwise the executor.
-    # if len(sys.argv) == 1:
-    #     e = SatyrExecutor(run_on_executor)
-    #     e.run()
-    # else:
+    args, kwargs = calls[1]
+    assert args[1].task_id.value == 'test-task-id'
+    assert args[1].state == 'TASK_FINISHED'

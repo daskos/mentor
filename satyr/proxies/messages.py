@@ -15,18 +15,28 @@ class Map(dict):
         for k, v in mapping.items():
             self[k] = v
 
+    @classmethod
+    def cast(cls, v):
+        if isinstance(v, Map):
+            return v
+        elif isinstance(v, dict):
+            return Map(v)
+        elif hasattr(v, '__iter__'):
+            return map(cls.cast, v)
+        else:
+            return v
+
     def __setitem__(self, k, v):
-        if not isinstance(v, Map):
-            if isinstance(v, dict):
-                v = Map(mapping=v)
-            elif hasattr(v, '__iter__'):
-                v = [Map(mapping=i) for i in v]
-        super(Map, self).__setitem__(k, v)
+        super(Map, self).__setitem__(k, self.cast(v))
 
     def __setattr__(self, k, v):
         self[k] = v
 
     def __getattr__(self, k):
+        return self[k]
+
+    def __missing__(self, k):
+        self[k] = Map()
         return self[k]
 
     def __hash__(self):
@@ -46,10 +56,10 @@ class RegisterProxies(type):
     def __iter__(cls):
         return iter(cls.registry)
 
-    def __str__(cls):
-        if cls in cls.registry:
-            return cls.__name__
-        return cls.__name__ + ": " + ", ".join([sc.__name__ for sc in cls])
+    # def __str__(cls):
+    #    if cls in cls.registry:
+    #        return cls.__name__
+    #    return cls.__name__ + ": " + ", ".join([sc.__name__ for sc in cls])
 
 
 class MessageProxy(Map):
@@ -171,6 +181,9 @@ class Filters(MessageProxy):
 
 class TaskStatus(MessageProxy):
     proto = mesos_pb2.TaskStatus
+
+    def is_finished(self):
+        return self.state == 'TASK_FINISHED'
 
 
 class Offer(MessageProxy, ResourcesMixin):

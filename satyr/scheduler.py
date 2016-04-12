@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import atexit
-import sys
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
@@ -34,7 +33,7 @@ class Scheduler(object):
         # run things
         status = 0 if driver.run() == mesos_pb2.DRIVER_STOPPED else 1
         driver.stop()  # Ensure that the driver process terminates.
-        sys.exit(status)
+        return status
 
     def on_registered(self, driver, framework_id, master):
         """Event handler triggered when the scheduler successfully registers

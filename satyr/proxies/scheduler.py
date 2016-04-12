@@ -74,11 +74,50 @@ class SchedulerProxy(Scheduler):
         return self.scheduler.on_error(SchedulerDriverProxy(driver), message)
 
 
-# encode entities in every fn
 class SchedulerDriverProxy(object):
+    """Proxy Interface for Mesos scheduler drivers."""
 
     def __init__(self, driver):
         self.driver = driver
+
+    def start(self):
+        """Starts the scheduler driver.
+
+        This needs to be called before any other driver calls are made.
+        """
+        return self.driver.start()
+
+    def stop(self, failover=False):
+        """Stops the scheduler driver.
+
+        If the 'failover' flag is set to False then it is expected that this
+        framework will never reconnect to Mesos and all of its executors and
+        tasks can be terminated.  Otherwise, all executors and tasks will
+        remain running (for some framework specific failover timeout) allowing
+        the scheduler to reconnect (possibly in the same process, or from a
+        different process, for example, on a different machine.)
+        """
+        return self.driver.stop(failover)
+
+    def abort(self):
+        """Aborts the driver so that no more callbacks can be made to the
+           scheduler.
+
+        The semantics of abort and stop have deliberately been separated so that
+        code can detect an aborted driver (i.e., via the return status of
+        SchedulerDriver.join), and instantiate and start another driver if
+        desired (from within the same process.)
+        """
+        return self.driver.abort()
+
+    def join(self):
+        """Waits for the driver to be stopped or aborted, possibly blocking the
+           current thread indefinitely.
+
+        The return status of this function can be used to determine if the
+        driver was aborted (see mesos.proto for a description of Status).
+        """
+        return self.driver.join()
 
     def request(self, requests):
         """Requests resources from Mesos.

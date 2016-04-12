@@ -1,7 +1,9 @@
 import pytest
 from mesos.interface import mesos_pb2
-from satyr.proxies.messages import (FrameworkID, FrameworkInfo, Map,
-                                    MessageProxy, RegisterProxies, decode)
+from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
+                                    FrameworkInfo, Map, Mem, MessageProxy,
+                                    RegisterProxies, TaskID, TaskInfo, decode,
+                                    encode)
 
 
 @pytest.fixture
@@ -63,6 +65,15 @@ def test_map_dot_set(d):
     assert isinstance(m.z.Z, Map)
 
 
+def test_map_set_missing(d):
+    m = Map(d)
+    m['y']['o']['w'] = 9
+    m.y.w.o = 6
+
+    assert m['y']['o']['w'] == 9
+    assert m.y.w.o == 6
+
+
 def test_register_proxies():
     class Base(object):
         __metaclass__ = RegisterProxies
@@ -83,7 +94,39 @@ def test_register_proxies():
                              ('base', Base)]
 
 
-def test_framework_info():
+def test_encode_resources():
+    pb = encode(Cpus(0.1))
+    assert pb.scalar.value == 0.1
+    assert pb.name == 'cpus'
+    assert pb.type == mesos_pb2.Value.SCALAR
+
+    pb = encode(Mem(16))
+    assert pb.scalar.value == 16
+    assert pb.name == 'mem'
+    assert pb.type == mesos_pb2.Value.SCALAR
+
+    pb = encode(Disk(256))
+    assert pb.scalar.value == 256
+    assert pb.name == 'disk'
+    assert pb.type == mesos_pb2.Value.SCALAR
+
+
+def test_encode_task_info():
+    task = TaskInfo(name='test-task',
+                    task_id=TaskID(value='test-task-id'),
+                    resources=[Cpus(0.1), Mem(16)],
+                    command=CommandInfo(value='testcmd'))
+    pb = encode(task)
+    assert pb.name == 'test-task'
+    assert pb.task_id.value == 'test-task-id'
+    assert pb.resources[0].name == 'cpus'
+    assert pb.resources[0].scalar.value == 0.1
+    assert pb.resources[1].name == 'mem'
+    assert pb.resources[1].scalar.value == 16
+    assert pb.command.value == 'testcmd'
+
+
+def test_decode_framework_info():
     message = mesos_pb2.FrameworkInfo(id=mesos_pb2.FrameworkID(value='test'))
     wrapped = decode(message)
 

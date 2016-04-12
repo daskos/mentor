@@ -13,28 +13,21 @@ class Map(dict):
     def __init__(self, mapping=None, **kwargs):
         mapping = mapping or kwargs
         for k, v in mapping.items():
+            self[k] = v
+
+    def __setitem__(self, k, v):
+        if not isinstance(v, Map):
             if isinstance(v, dict):
-                mapping[k] = Map(mapping=v)
+                v = Map(mapping=v)
             elif hasattr(v, '__iter__'):
-                mapping[k] = [Map(mapping=i) for i in v]
-        super(Map, self).__init__(mapping)
-        #self.__dict__ = self
+                v = [Map(mapping=i) for i in v]
+        super(Map, self).__setitem__(k, v)
 
-    def __getattr__(self, name):
-        return self[name]
+    def __setattr__(self, k, v):
+        self[k] = v
 
-    def __setattr__(self, name, value):
-        self[name] = value
-
-    def __delattr__(self, name):
-        if name in self:
-            del self[name]
-        else:
-            raise AttributeError('No such attribute: {}'.format(name))
-
-    def __missing__(self, name):
-        self[name] = Map()
-        return self[name]
+    def __getattr__(self, k):
+        return self[k]
 
     def __hash__(self):
         return hash(frozenset(self))

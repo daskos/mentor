@@ -1,5 +1,6 @@
 import pytest
-from satyr.multiprocessing import AsyncResult, apply_async
+
+pytest.importorskip('satyr.multiprocessing')
 
 
 def add(a, b):

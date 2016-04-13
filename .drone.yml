@@ -14,10 +14,10 @@ compose:
       - MESOS_MASTER=zk://localhost:2181/mesos
       - MESOS_HOSTNAME=localhost
       - MESOS_CONTAINERIZERS=docker,mesos
-      - MESOS_WORK_DIR=/tmp/dask.mesos/mesos
+      - MESOS_WORK_DIR=/tmp/satyr/mesos
       - MESOS_STRICT=false
     volumes:
-      - /tmp/dask.mesos/mesos:/tmp/dask.mesos/mesos
+      - /tmp/satyr/mesos:/tmp/satyr/mesos
       - /var/run/docker.sock:/var/run/docker.sock
     privileged: true
 
@@ -28,7 +28,6 @@ build:
     - SATYR_MASTER=zk://localhost:2181/mesos
   commands:
     #- easy_install http://downloads.mesosphere.io/master/debian/8/mesos-0.26.0-py2.7-linux-x86_64.egg
-    - pip install --process-dependency-links -e .
-    - pip install pytest
-    #- sleep 10000000000000
-    #- python -m pytest satyr/tests
+    #- pip install --process-dependency-links -e .
+    #- pip install pytest
+    - python setup.py test

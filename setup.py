@@ -18,5 +18,5 @@ setup(name='satyr',
       install_requires=['cloudpickle', 'colorlog', 'kazoo', 'toolz'],
       extras_require={'mesos': ['mesos.native']},
       setup_requires=['pytest-runner'],
-      tests_require=['pytest', 'pytest-mock'],
+      tests_require=['pytest-mock', 'pytest'],
       zip_safe=False)

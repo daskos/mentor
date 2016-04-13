@@ -29,7 +29,7 @@ class SingleTaskScheduler(Scheduler):
 
 
 @pytest.fixture
-def task():
+def command():
     task = TaskInfo(name='test-task',
                     task_id=TaskID(value='test-task-id'),
                     resources=[Cpus(0.1), Mem(16)],
@@ -37,8 +37,19 @@ def task():
     return task
 
 
-def test_state_transitions(mocker, task):
-    sched = SingleTaskScheduler(name='test-scheduler', task=task)
+@pytest.fixture
+def docker_command():
+    task = TaskInfo(name='testdocker--task',
+                    task_id=TaskID(value='test-docker-task-id'),
+                    resources=[Cpus(0.1), Mem(64)],
+                    command=CommandInfo(value='echo 100'))
+    task.container.type = 'DOCKER'
+    task.container.docker.image = 'lensacom/satyr:latest'
+    return task
+
+
+def test_state_transitions(mocker, command):
+    sched = SingleTaskScheduler(name='test-scheduler', task=command)
     mocker.spy(sched, 'on_update')
     sched.run()
 
@@ -51,4 +62,21 @@ def test_state_transitions(mocker, task):
 
     args, kwargs = calls[1]
     assert args[1].task_id.value == 'test-task-id'
+    assert args[1].state == 'TASK_FINISHED'
+
+
+def test_dockerized_state_transitions(mocker, docker_command):
+    sched = SingleTaskScheduler(name='test-scheduler', task=docker_command)
+    mocker.spy(sched, 'on_update')
+    sched.run()
+
+    calls = sched.on_update.call_args_list
+    assert len(calls) == 2
+
+    args, kwargs = calls[0]
+    assert args[1].task_id.value == 'test-docker-task-id'
+    assert args[1].state == 'TASK_RUNNING'
+
+    args, kwargs = calls[1]
+    assert args[1].task_id.value == 'test-docker-task-id'
     assert args[1].state == 'TASK_FINISHED'

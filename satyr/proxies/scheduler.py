@@ -180,7 +180,7 @@ class SchedulerDriverProxy(object):
         return self.driver.declineOffer(encode(offer_id),
                                         encode(filters))  # TODO filters
 
-    def accept(self, offer_ids, operations, filters=None):
+    def accept(self, offer_ids, operations, filters=Filters()):
         """Accepts the given offers and performs a sequence of operations
            on those accepted offers.
 

@@ -1,8 +1,9 @@
 from mesos.interface import mesos_pb2
 from satyr.proxies import ExecutorDriverProxy, ExecutorProxy
+from satyr.proxies.messages import TaskStatus
 
 
-def test_event_handlers_with_wrapped_arguments(mocker):
+def test_executor_event_handlers(mocker):
     executor = mocker.Mock()
     driver = mocker.Mock()
     proxy = ExecutorProxy(executor)
@@ -25,3 +26,24 @@ def test_event_handlers_with_wrapped_arguments(mocker):
     executor.on_message.assert_called_once()
     executor.on_shutdown.assert_called_once()
     executor.on_error.assert_called_once()
+
+
+def test_executor_driver_callbacks(mocker):
+    driver = mocker.Mock()
+    proxy = ExecutorDriverProxy(driver)
+
+    proxy.abort()
+    proxy.join()
+    proxy.start()
+    proxy.stop()
+    proxy.run()
+    proxy.update(TaskStatus())
+    proxy.message('message')
+
+    driver.abort.assert_called_once()
+    driver.join.assert_called_once()
+    driver.start.assert_called_once()
+    driver.stop.assert_called_once()
+    driver.run.assert_called_once()
+    driver.sendStatusUpdate.assert_called_once()
+    driver.sendFrameworkMessage.assert_called_once()

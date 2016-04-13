@@ -205,5 +205,14 @@ class CommandInfo(MessageProxy):
 class ContainerInfo(MessageProxy):
     proto = mesos_pb2.ContainerInfo
 
+
+class Request(MessageProxy):
+    proto = mesos_pb2.Request
+
+
+class Operation(MessageProxy):
+    proto = mesos_pb2.Offer.Operation
+
+
 encode = partial(protobuf.encode, containers=MessageProxy.registry)
 decode = partial(protobuf.decode, containers=MessageProxy.registry)

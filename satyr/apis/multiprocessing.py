@@ -2,91 +2,160 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 import uuid
+from collections import deque
+from multiprocessing import Queue, TimeoutError
 from multiprocessing.pool import AsyncResult
 from time import sleep
 
 import cloudpickle
-from mesos.interface import mesos_pb2
 
-from . import scheduler
-
-
-class Satyr():
-
-    @property
-    def queue(self):
-        return self.sched.task_queue
-
-    def __init__(self, sched):
-        self.result_pool = {}
-        self.sched = sched
-        self.sched.satyr = self
-        self.async_results = {}
-        self.results = {}
-        scheduler.run_scheduler(self.sched)
-
-    def apply_async(self, func, args=[], kwargs={}):
-        task = {
-            'id': str(uuid.uuid4()),
-            'resources': kwargs.pop('resources', {}),
-            'image': kwargs.pop('image', None),
-            'msg': cloudpickle.dumps({'func': func, 'args': args, 'kwargs': kwargs})
-        }
-
-        self.sched.add_job(task)
-        self.async_results[task['id']] = SatyrAsyncResult(self, task)
-
-        return self.async_results[task['id']]
-
-    def update_task_status(self, task_status):
-        id = task_status.task_id.value
-        status = task_status.state
-
-        if status == mesos_pb2.TASK_FINISHED:
-            self.async_results[id].update_status(task_status, True)
-        elif status in [mesos_pb2.TASK_FAILED, mesos_pb2.TASK_LOST, mesos_pb2.TASK_KILLED]:
-            self.async_results[id].update_status(task_status, False)
+from ..messages import PythonTask
+from ..scheduler import BaseScheduler
+from ..utils import run_daemon
 
 
-def create_satyr(config):
-    def store_result(sched, driver, executorId, slaveId, message):
-        result = cloudpickle.loads(message)
-        if result.get('response', False) and sched.satyr:
-            sched.satyr.results[result['id']] = result['msg']
-            sched.satyr.async_results[result['id']
-                                      ].flags += (SatyrAsyncResult.FLAG_READY,)
+# class Process(TaskInfo):
 
-    sched = scheduler.create_scheduler(config, store_result)
+#     def __init__(self, target, name=None, args=[], kwargs={})
+#         self.name = name
+#         self.daemon = False
+#         self.pid = None
 
-    return Satyr(sched)
+#     def terminate(self):
+#         pass
+
+#     def run(self):
+#         pass
+
+#     def start(self):
+#         # create single task scheduler and submit task itself
+#         pass
+
+#     def join(timeout=None):
+#         pass
+
+#     def is_alive(self):
+#         pass
 
 
-class SatyrAsyncResult(AsyncResult):
-    FLAG_READY = 0
-    FLAG_SUCCESSFUL = 1
+# class SatyrAsyncResult(AsyncResult):
+#     FLAG_READY = 0
+#     FLAG_SUCCESSFUL = 1
 
-    def __init__(self, satyr, task):
-        self.satyr = satyr
-        self.task = copy.copy(task)
-        self.flags = ()
+#     def __init__(self, satyr, task):
+#         self.satyr = satyr
+#         self.task = copy.copy(task)
+#         self.flags = ()
+
+#     def get(self, timeout=None):
+#         self.wait(timeout)
+#         return self.satyr.results.get(self.task['id'], None)
+
+#     def wait(self, timeout=None):
+#         while not self.ready():
+#             sleep(1)
+#             print('[%s] Waiting to get ready...' % self.task['id'])
+
+#     def ready(self):
+#         return self.FLAG_READY in self.flags
+
+#     def successful(self):
+# return self.FLAG_READY in self.flags and self.FLAG_SUCCESSFUL in
+# self.flags
+
+#     def update_status(self, task, is_successful):
+#         if not self.task['id'] == task.task_id.value:
+#             return
+#         self.flags = self.flags + \
+#             (self.FLAG_SUCCESSFUL,) if is_successful else self.flags
+
+
+class AsyncResult(object):
+
+    def __init__(self):
+        self.value = None
 
     def get(self, timeout=None):
-        self.wait(timeout)
-        return self.satyr.results.get(self.task['id'], None)
+        pass
 
     def wait(self, timeout=None):
-        while not self.ready():
-            sleep(1)
-            print('[%s] Waiting to get ready...' % self.task['id'])
+        pass
 
     def ready(self):
-        return self.FLAG_READY in self.flags
+        pass
 
     def successful(self):
-        return self.FLAG_READY in self.flags and self.FLAG_SUCCESSFUL in self.flags
+        pass
 
-    def update_status(self, task, is_successful):
-        if not self.task['id'] == task.task_id.value:
-            return
-        self.flags = self.flags + \
-            (self.FLAG_SUCCESSFUL,) if is_successful else self.flags
+
+class Pool(BaseScheduler):
+
+    def __init__(self, processes=-1, *args, **kwargs):
+        self.processes = processes
+        self.tasks = deque()
+        self.results = {}
+        self.callbacks = {}
+        super(Pool, self).__init__(*args, **kwargs)
+        run_daemon('Mesos Multiprocessing Pool Scheduler', self)
+
+    def close(self):
+        pass
+
+    def terminate(self):
+        pass
+
+    def join(self):
+        pass
+
+    def on_offers(self, driver, offers):
+        # max paralellism determined by self.processes
+        try:
+            task = self.tasks.pop()
+        except:
+            pass
+        else:
+            launched = False
+            for offer in offers:
+                if offer > task:
+                    task.slave_id = offer.slave_id
+                    driver.launch(offer.id, [task])
+                    launched = True
+                else:
+                    driver.decline(offer.id)
+            if not launched:
+                self.tasks.append(task)
+
+    def on_update(self, driver, status):
+        def pop(task_id):
+            result = self.results.pop(status.task_id.value, None)
+            callback = self.callbacks.pop(status.task_id.value, None)
+            return result, callback
+
+        if status.state == 'TASK_FINISHED':
+            result, callback = pop(status.task_id.value)
+            result.value = status.data
+            if callback:
+                callback()
+        elif status.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED']:
+            result, callback = pop(status.task_id.value)
+
+        if len(self.tasks) == 0 and len(self.results) == 0:
+            driver.stop()
+
+    def map(self, func, iterable, chunksize=1):
+        pass
+
+    def map_async(self, func, iterable, chunksize=1, callback=None):
+        pass
+
+    def apply(self, func, args=[], kwds={}):
+        pass
+
+    def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
+        task = PickledTask(fn=func, args=args, kwargs=kwds, **kwargs)
+
+        self.tasks.append(task)
+        self.callbacks[task.id.value] = callback
+
+        self.results[task.id.value] = AsyncResult()
+        return self.results[task.id.value]

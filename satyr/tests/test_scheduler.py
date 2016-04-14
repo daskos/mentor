@@ -1,9 +1,9 @@
 import pytest
 from satyr.proxies.messages import CommandInfo, Cpus, Mem, TaskID, TaskInfo
-from satyr.scheduler import Scheduler
+from satyr.scheduler import BaseScheduler
 
 
-class SingleTaskScheduler(Scheduler):
+class SingleTaskScheduler(BaseScheduler):
 
     def __init__(self, task, *args, **kwargs):
         self.ready = task
@@ -51,7 +51,13 @@ def docker_command():
 def test_state_transitions(mocker, command):
     sched = SingleTaskScheduler(name='test-scheduler', task=command)
     mocker.spy(sched, 'on_update')
+    # this is a system test
+    # to unit test don't run it
     sched.run()
+    # mock the driver, then call on_offers, on_update(running), on_update(finished)
+    # watch driver.launch called, then driver.stop called
+    # move this code to a system test e.g. test_framework.py testing executor,
+    # scheduler simultaneusly
 
     calls = sched.on_update.call_args_list
     assert len(calls) == 2

@@ -16,13 +16,13 @@ def d():
 
 
 def test_map_init(d):
-    m = Map(d)
+    m = Map(**d)
     assert isinstance(m, Map)
     assert isinstance(m, dict)
 
 
 def test_map_get(d):
-    m = Map(d)
+    m = Map(**d)
     assert m['a'] == 1
     assert m['c']['e']['f'] == 6
     assert m['b'][0]['j'] == 9
@@ -32,7 +32,7 @@ def test_map_get(d):
 
 
 def test_map_dot_get(d):
-    m = Map(d)
+    m = Map(**d)
     assert m.a == 1
     assert m.c.e.f == 6
     assert m.b[0].j == 9
@@ -42,7 +42,7 @@ def test_map_dot_get(d):
 
 
 def test_map_set(d):
-    m = Map(d)
+    m = Map(**d)
     m['A'] = 11
     m['a'] = 'one'
     m['z'] = {'Z': {'omega': 20}}
@@ -54,7 +54,7 @@ def test_map_set(d):
 
 
 def test_map_dot_set(d):
-    m = Map(d)
+    m = Map(**d)
     m.A = 11
     m.a = 'one'
     m.z = {'Z': {'omega': 20}}
@@ -66,7 +66,7 @@ def test_map_dot_set(d):
 
 
 def test_map_set_missing(d):
-    m = Map(d)
+    m = Map(**d)
     m['y']['o']['w'] = 9
     m.y.w.o = 6
 

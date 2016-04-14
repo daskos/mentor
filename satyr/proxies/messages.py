@@ -10,9 +10,8 @@ from .. import protobuf
 
 class Map(dict):
 
-    def __init__(self, mapping=None, **kwargs):
-        mapping = mapping or kwargs
-        for k, v in mapping.items():
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
             self[k] = v
 
     @classmethod
@@ -20,7 +19,7 @@ class Map(dict):
         if isinstance(v, Map):
             return v
         elif isinstance(v, dict):
-            return Map(v)
+            return Map(**v)
         elif hasattr(v, '__iter__'):
             return map(cls.cast, v)
         else:
@@ -30,7 +29,11 @@ class Map(dict):
         super(Map, self).__setitem__(k, self.cast(v))
 
     def __setattr__(self, k, v):
-        self[k] = v
+        prop = getattr(self.__class__, k, None)  # support properties
+        if isinstance(prop, property):
+            prop.fset(self, v)
+        else:
+            self[k] = v
 
     def __getattr__(self, k):
         return self[k]
@@ -192,10 +195,6 @@ class Offer(MessageProxy, ResourcesMixin):
 
 class TaskInfo(MessageProxy, ResourcesMixin):
     proto = mesos_pb2.TaskInfo
-
-    def status(self, state, message='', data=None):
-        return TaskStatus(task_id=self.id, state=state, message=message,
-                          data=data)
 
 
 class CommandInfo(MessageProxy):

@@ -17,6 +17,10 @@ from colorlog import ColoredFormatter
 from toolz import curry
 
 
+# TODO use python-daemon like luigi does
+# https://github.com/spotify/luigi/blob/7db1ceadc4d3f8ef62eccffa1a6412bc747f8132/luigi/process.py#L78
+
+
 @curry
 def envargs(fn, prefix='', envs=os.environ):
     spec = inspect.getargspec(fn)

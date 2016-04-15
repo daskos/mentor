@@ -152,7 +152,7 @@ class Pool(BaseScheduler):
         pass
 
     def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
-        task = PickledTask(fn=func, args=args, kwargs=kwds, **kwargs)
+        task = PythonTask(fn=func, args=args, kwargs=kwds, **kwargs)
 
         self.tasks.append(task)
         self.callbacks[task.id.value] = callback

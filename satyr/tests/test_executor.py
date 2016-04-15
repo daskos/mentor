@@ -1,81 +1,69 @@
+from __future__ import absolute_import, division, print_function
+
+from time import sleep
+
 import pytest
+from satyr.executor import BaseExecutor
+from satyr.messages import PythonTask, PythonTaskStatus
 from satyr.proxies.messages import CommandInfo, Cpus, Mem, TaskID, TaskInfo
-from satyr.scheduler import BaseScheduler
-
-# class SimpleExecutor(BaseExecutor):
-
-#     def __init__(self, task, *args, **kwargs):
-#         self.ready = task
-#         self.running = None
-#         super(SingleTaskScheduler, self).__init__(*args, **kwargs)
-
-#     def on_offers(self, driver, offers):
-#         if self.ready:
-#             for offer in offers:
-#                 if offer > self.ready:
-#                     self.ready.slave_id = offer.slave_id
-#                     driver.launch(offer.id, [self.ready])
-#                     self.running = self.ready
-#                     self.ready = None
-#                 else:
-#                     driver.decline(offer.id)
-
-#     def on_update(self, driver, status):
-#         if status.state == 'TASK_FINISHED':
-#             self.running = None
-#         if not self.ready and not self.running:
-#             driver.stop()
 
 
-# @pytest.fixture
-# def command():
-#     task = TaskInfo(name='test-task',
-#                     task_id=TaskID(value='test-task-id'),
-#                     resources=[Cpus(0.1), Mem(16)],
-#                     command=CommandInfo(value='echo 100'))
-#     return task
+class FakeThread(object):
+
+    def __init__(self, target):
+        self.target = target
+
+    def start(self):
+        return self.target()
 
 
-# @pytest.fixture
-# def docker_command():
-#     task = TaskInfo(name='testdocker--task',
-#                     task_id=TaskID(value='test-docker-task-id'),
-#                     resources=[Cpus(0.1), Mem(64)],
-#                     command=CommandInfo(value='echo 100'))
-#     task.container.type = 'DOCKER'
-#     task.container.docker.image = 'lensacom/satyr:latest'
-#     return task
+def test_finished_status_updates(mocker):
+    mocker.patch('threading.Thread', side_effect=FakeThread)
+
+    driver = mocker.Mock()
+    task = PythonTask(fn=sum, args=[range(5)])
+
+    executor = BaseExecutor()
+    executor.on_launch(driver, task)
+
+    calls = driver.update.call_args_list
+
+    args, kwargs = calls[0]
+    status = args[0]
+    assert isinstance(status, PythonTaskStatus)
+    assert status.state == 'TASK_RUNNING'
+    assert status.result == None
+
+    args, kwargs = calls[1]
+    status = args[0]
+    assert isinstance(status, PythonTaskStatus)
+    assert status.state == 'TASK_FINISHED'
+    assert status.result == 10
 
 
-# def test_state_transitions(mocker, command):
-#     sched = SingleTaskScheduler(name='test-scheduler', task=command)
-#     mocker.spy(sched, 'on_update')
-#     sched.run()
+def test_failed_status_updates(mocker):
+    mocker.patch('threading.Thread', side_effect=FakeThread)
 
-#     calls = sched.on_update.call_args_list
-#     assert len(calls) == 2
+    def failing_function(*args):
+        raise Exception("Booom!")
 
-#     args, kwargs = calls[0]
-#     assert args[1].task_id.value == 'test-task-id'
-#     assert args[1].state == 'TASK_RUNNING'
+    driver = mocker.Mock()
+    task = PythonTask(fn=failing_function, args=['arbitrary', 'args'])
 
-#     args, kwargs = calls[1]
-#     assert args[1].task_id.value == 'test-task-id'
-#     assert args[1].state == 'TASK_FINISHED'
+    executor = BaseExecutor()
+    executor.on_launch(driver, task)
 
+    calls = driver.update.call_args_list
 
-# def test_dockerized_state_transitions(mocker, docker_command):
-#     sched = SingleTaskScheduler(name='test-scheduler', task=docker_command)
-#     mocker.spy(sched, 'on_update')
-#     sched.run()
+    args, kwargs = calls[0]
+    status = args[0]
+    assert isinstance(status, PythonTaskStatus)
+    assert status.state == 'TASK_RUNNING'
+    assert status.result == None
 
-#     calls = sched.on_update.call_args_list
-#     assert len(calls) == 2
-
-#     args, kwargs = calls[0]
-#     assert args[1].task_id.value == 'test-docker-task-id'
-#     assert args[1].state == 'TASK_RUNNING'
-
-#     args, kwargs = calls[1]
-#     assert args[1].task_id.value == 'test-docker-task-id'
-#     assert args[1].state == 'TASK_FINISHED'
+    args, kwargs = calls[1]
+    status = args[0]
+    assert isinstance(status, PythonTaskStatus)
+    assert status.state == 'TASK_FAILED'
+    assert status.result == None
+    assert status.message == 'Booom!'

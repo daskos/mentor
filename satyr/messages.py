@@ -48,11 +48,11 @@ class PythonTask(TaskInfo):
         fn, args, kwargs = self.callback
         return fn(*args, **kwargs)
 
-    def status(self, state, message='', data=None):
+    def status(self, state, message='', result=None):
         return PythonTaskStatus(task_id=self.id,
                                 state=state,
                                 message=message,
-                                data=data)
+                                result=result)
 
     @property
     def callback(self):

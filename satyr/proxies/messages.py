@@ -59,11 +59,6 @@ class RegisterProxies(type):
     def __iter__(cls):
         return iter(cls.registry)
 
-    # def __str__(cls):
-    #    if cls in cls.registry:
-    #        return cls.__name__
-    #    return cls.__name__ + ": " + ", ".join([sc.__name__ for sc in cls])
-
 
 class MessageProxy(Map):
     __metaclass__ = RegisterProxies
@@ -72,33 +67,33 @@ class MessageProxy(Map):
 
 class ResourcesMixin(object):
 
+    def get_scalar(self, cls):
+        for res in self.resources:
+            if isinstance(res, cls):
+                return res.scalar.value
+
     @property
     def cpus(self):
-        for res in self.resources:
-            if res.name == 'cpus':
-                return res.scalar.value
+        return self.get_scalar(Cpus)
 
     @property
     def mem(self):
-        for res in self.resources:
-            if res.name == 'mem':
-                return res.scalar.value
+        return self.get_scalar(Mem)
 
     @property
     def disk(self):
-        for res in self.resources:
-            if res.name == 'disk':
-                return res.scalar.value
+        return self.get_scalar(Disk)
 
-    @property
-    def ports(self):
-        for res in self.resources:
-            if res.name == 'ports':
-                return [(rng.begin, rng.end) for rng in res.ranges.range]
+    # @property
+    # def ports(self):
+    #     for res in self.resources:
+    #         if isinstance(res, Ports):
+    #             return [(rng.begin, rng.end) for rng in res.ranges.range]
 
     def __cmp__(self, other):
         this = (self.cpus, self.mem, self.disk)
         other = (other.cpus, other.mem, other.disk)
+
         if this < other:
             return -1
         elif this > other:
@@ -110,8 +105,7 @@ class ResourcesMixin(object):
     #     ports = list(set(self.ports) | set(other.ports))
     #     disk = self.disk + other.disk
     #     cpus = self.cpus + other.cpus
-    #     mem = self.mem + other.mem
-    #     return Resources(cpus=cpus, mem=mem, disk=disk, ports=ports)
+    #    mem = self.mem + other.mem
 
     # def __sub__(self, other):
     #     ports = list(set(self.ports) - set(other.ports))
@@ -189,11 +183,11 @@ class TaskStatus(MessageProxy):
         return self.state == 'TASK_FINISHED'
 
 
-class Offer(MessageProxy, ResourcesMixin):
+class Offer(ResourcesMixin, MessageProxy):  # important order!
     proto = mesos_pb2.Offer
 
 
-class TaskInfo(MessageProxy, ResourcesMixin):
+class TaskInfo(ResourcesMixin, MessageProxy):
     proto = mesos_pb2.TaskInfo
 
 

@@ -1,65 +1,62 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from satyr.proxies.messages import CommandInfo, Cpus, Mem, TaskID, TaskInfo
+from satyr.messages import PythonTask
+from satyr.proxies.messages import (CommandInfo, Cpus, Disk, Mem, Offer,
+                                    OfferID, SlaveID, TaskID, TaskInfo)
 from satyr.scheduler import BaseScheduler
 
-pytest.skip()
-
 
 @pytest.fixture
-def command():
-    task = TaskInfo(name='test-task',
-                    task_id=TaskID(value='test-task-id'),
-                    resources=[Cpus(0.1), Mem(16)],
-                    command=CommandInfo(value='echo 100'))
-    return task
+def offers():
+    o1 = Offer(id=OfferID(value='first-offer'),
+               slave_id=SlaveID(value='test-slave'),
+               resources=[Cpus(2), Mem(256), Disk(1024)])
+    o2 = Offer(id=OfferID(value='second-offer'),
+               slave_id=SlaveID(value='test-slave'),
+               resources=[Cpus(1), Mem(1024), Disk(2048)])
+    return [o1, o2]
 
 
-@pytest.fixture
-def docker_command():
-    task = TaskInfo(name='testdocker--task',
-                    task_id=TaskID(value='test-docker-task-id'),
-                    resources=[Cpus(0.1), Mem(64)],
-                    command=CommandInfo(value='echo 100'))
-    task.container.type = 'DOCKER'
-    task.container.docker.image = 'lensacom/satyr:latest'
-    return task
-
-
-def test_state_transitions(mocker, command):
+def test_launch_decline(mocker, offers):
     driver = mocker.Mock()
-    sched = SingleTaskScheduler(name='test-scheduler', task=command)
+    sched = BaseScheduler(name='test-scheduler')
 
-    # mock the driver, then call on_offers, on_update(running), on_update(finished)
-    # watch driver.launch called, then driver.stop called
-    # move this code to a system test e.g. test_framework.py testing executor,
-    # scheduler simultaneusly
+    sched.submit(sum, args=[range(5)],
+                 id=TaskID(value='test-task-id'),
+                 resources=[Cpus(0.1), Mem(128), Disk(0)])
+    sched.on_offers(driver, offers)
 
-    calls = sched.on_update.call_args_list
-    assert len(calls) == 2
-
-    args, kwargs = calls[0]
-    assert args[1].task_id.value == 'test-task-id'
-    assert args[1].state == 'TASK_RUNNING'
-
-    args, kwargs = calls[1]
-    assert args[1].task_id.value == 'test-task-id'
-    assert args[1].state == 'TASK_FINISHED'
-
-
-def test_dockerized_state_transitions(mocker, docker_command):
-    sched = SingleTaskScheduler(name='test-scheduler', task=docker_command)
-    mocker.spy(sched, 'on_update')
-    sched.run()
-
-    calls = sched.on_update.call_args_list
-    assert len(calls) == 2
+    calls = driver.launch.call_args_list
 
     args, kwargs = calls[0]
-    assert args[1].task_id.value == 'test-docker-task-id'
-    assert args[1].state == 'TASK_RUNNING'
+    assert isinstance(args[0], OfferID)
+    assert args[0].value == 'first-offer'
+    assert isinstance(args[1][0], PythonTask)
+    assert args[1][0].id.value == 'test-task-id'
 
-    args, kwargs = calls[1]
-    assert args[1].task_id.value == 'test-docker-task-id'
-    assert args[1].state == 'TASK_FINISHED'
+    calls = driver.decline.call_args_list
+    args, kwargs = calls[0]
+    assert isinstance(args[0], OfferID)
+    assert args[0].value == 'second-offer'
+
+
+def test_status_update(mocker, offers):
+    driver = mocker.Mock()
+    sched = BaseScheduler(name='test-scheduler')
+
+    result = sched.submit(sum, args=[range(5)],
+                          id=TaskID(value='test-task-id'),
+                          resources=[Cpus(0.1), Mem(128), Disk(0)])
+    task = sched.tasks[0]
+    sched.on_offers(driver, offers)
+
+    sched.on_update(driver, task.status('TASK_RUNNING'))
+    assert result.state == 'TASK_RUNNING'
+    assert result.ready() == False
+
+    sched.on_update(driver, task.status('TASK_FINISHED', result=task()))
+    assert result.state == 'TASK_FINISHED'
+    assert result.ready() == True
+    assert result.successful() == True
+    assert result.get() == 10

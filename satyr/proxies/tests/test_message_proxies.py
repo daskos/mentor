@@ -2,8 +2,8 @@ import pytest
 from mesos.interface import mesos_pb2
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
                                     FrameworkInfo, Map, Mem, MessageProxy,
-                                    RegisterProxies, TaskID, TaskInfo, decode,
-                                    encode)
+                                    Offer, RegisterProxies, ResourcesMixin,
+                                    TaskID, TaskInfo, decode, encode)
 
 
 @pytest.fixture
@@ -134,3 +134,38 @@ def test_decode_framework_info():
     assert isinstance(wrapped, FrameworkInfo)
     assert isinstance(wrapped.id, MessageProxy)
     assert isinstance(wrapped.id, FrameworkID)
+
+
+def test_resources_mixin():
+    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+    o2 = Offer(resources=[Cpus(2), Mem(256), Disk(1024)])
+
+    t1 = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+    t2 = TaskInfo(resources=[Cpus(1), Mem(256), Disk(512)])
+
+    assert o1.cpus == 1
+    assert o1.mem == 128
+    assert o2.cpus == 2
+    assert o2.disk == 1024
+
+    assert t1.cpus == 0.5
+    assert t1.mem == 128
+    assert t2.cpus == 1
+    assert t2.disk == 512
+
+    assert o1 == o1
+    assert o1 < o2
+    assert o1 <= o2
+    assert o2 > o1
+    assert o2 >= o1
+
+    assert t1 == t1
+    assert t1 < t2
+    assert t1 <= t2
+    assert t2 > t1
+    assert t2 >= t1
+
+    assert o1 >= t1
+    assert o2 >= t1
+    assert o2 >= t2
+    assert t2 >= o1

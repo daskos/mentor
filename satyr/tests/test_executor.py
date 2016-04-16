@@ -42,7 +42,7 @@ def test_finished_status_updates(mocker):
 
 
 def test_failed_status_updates(mocker):
-    mocker.patch('threading.Thread', side_effect=FakeThread)
+    mocker.patch('threading.Thread', FakeThread)
 
     def failing_function(*args):
         raise Exception("Booom!")

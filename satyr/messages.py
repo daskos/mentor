@@ -5,8 +5,8 @@ from uuid import uuid4
 import cloudpickle
 from mesos.interface import mesos_pb2
 
-from .proxies.messages import (Cpus, Disk, Mem, TaskInfo, TaskStatus, decode,
-                               encode)
+from .proxies.messages import (Cpus, Disk, Mem, ResourcesMixin, TaskInfo,
+                               TaskStatus, decode, encode)
 
 
 class PythonTaskStatus(TaskStatus):

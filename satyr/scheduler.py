@@ -1,14 +1,22 @@
 from __future__ import absolute_import, division, print_function
 
 import atexit
+import time
+from collections import deque
+from uuid import uuid4
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
 from . import log as logging
 from .interface import Scheduler
+from .messages import PythonTask
 from .proxies import SchedulerProxy
-from .proxies.messages import FrameworkInfo, encode
+from .proxies.messages import FrameworkInfo, ResourcesMixin, TaskID, encode
+
+
+class PackError(Exception):
+    pass
 
 
 class AsyncResult(object):
@@ -23,8 +31,8 @@ class AsyncResult(object):
             raise ValueError('Async result not ready!')
 
     def wait(self, timeout=None):
-        # block intil ready
-        pass
+        while not self.ready():
+            time.sleep(0.1)
 
     def ready(self):
         return self.state not in ['TASK_STAGING', 'TASK_RUNNING']
@@ -60,28 +68,32 @@ class BaseScheduler(Scheduler):
         driver.stop()  # Ensure that the driver process terminates.
         return status
 
-    def submit(fn, args=[], kwargs={}, **kwds):
-        task = PythonTask(fn=fn, args=args, kwargs=kwargs, **kwds)
+    def submit(self, fn, args=[], kwargs={}, **kwds):
+        tid = kwds.pop('id', None) or TaskID(value=str(uuid4()))
+        task = PythonTask(id=tid, fn=fn, args=args, kwargs=kwargs, **kwds)
         self.tasks.append(task)
         self.results[task.id.value] = AsyncResult(task.state)
         return self.results[task.id.value]
 
     def on_offers(self, driver, offers):  # default binpacking
+        def pack(task, offers):
+            for offer in offers:
+                if offer >= task:
+                    task.slave_id = offer.slave_id
+                    return (offer, task)
+            raise PackError('Couldn\'t pack')
+
         try:
             task = self.tasks.pop()
-        except:
-            pass
+            offer, task = pack(task, offers)
+        except PackError as e:
+            self.tasks.append(task)
         else:
-            launched = False
+            offers.pop(offers.index(offer))
+            driver.launch(offer.id, [task])
+        finally:
             for offer in offers:
-                if offer > task:
-                    task.slave_id = offer.slave_id
-                    driver.launch(offer.id, [task])
-                    launched = True
-                else:
-                    driver.decline(offer.id)
-            if not launched:
-                self.tasks.append(task)
+                driver.decline(offer.id)
 
     def on_update(self, driver, status):
         result = self.results[status.task_id.value]

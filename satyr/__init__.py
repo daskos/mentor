@@ -9,3 +9,8 @@ configure_logging(True, log=log)
 
 import pkg_resources as _pkg_resources
 __version__ = _pkg_resources.get_distribution('satyr').version
+
+
+from .scheduler import BaseScheduler
+from .executor import BaseExecutor
+from .messages import PythonTask, PythonTaskStatus

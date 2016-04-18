@@ -8,12 +8,6 @@ from .. import log as logging
 from .messages import decode, encode
 
 
-# testing these are pretty straightforward
-
-# decode entities in every fn
-# TODO: logging
-
-
 class ExecutorProxy(Executor):
     """Base class for Mesos executors.
 
@@ -75,10 +69,12 @@ class ExecutorDriverProxy(object):
 
         This needs to be called before any other driver calls are made.
         """
+        logging.info('Driver started')
         return self.driver.start()
 
     def stop(self):
         """Stops the executor driver."""
+        logging.info('Driver stopped')
         return self.driver.stop()
 
     def abort(self):
@@ -91,6 +87,7 @@ class ExecutorDriverProxy(object):
         desired (from within the same process, although this functionality is
         currently not supported for executors).
         """
+        logging.info('Driver aborted')
         return self.driver.abort()
 
     def join(self):
@@ -100,10 +97,12 @@ class ExecutorDriverProxy(object):
         The return status of this function can be used to determine if the
         driver was aborted (see mesos.proto for a description of Status).
         """
+        logging.info('Joined to driver')
         return self.driver.join()
 
     def run(self):
         """Starts and immediately joins (i.e., blocks on) the driver."""
+        logging.info('Driver run')
         return self.driver.run()
 
     def update(self, status):
@@ -115,6 +114,7 @@ class ExecutorDriverProxy(object):
         See Scheduler.statusUpdate for more information about status update
         acknowledgements.
         """
+        logging.info('Driver received status update')
         return self.driver.sendStatusUpdate(encode(status))
 
     def message(self, data):
@@ -123,4 +123,5 @@ class ExecutorDriverProxy(object):
         These messages are best effort; do not expect a framework message to be
         retransmitted in any reliable fashion.
         """
+        logging.info('Driver received framework message')
         return self.driver.sendFrameworkMessage(data)

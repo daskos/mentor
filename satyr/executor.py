@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import atexit
+import logging
 import threading
 
 from mesos.interface import mesos_pb2
@@ -44,6 +45,9 @@ class BaseExecutor(Executor):
 
         thread = threading.Thread(target=run_task)
         thread.start()
+
+    def on_kill(self, driver, task_id):
+        driver.stop()
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from functools import partial
+from uuid import uuid4
 
 from google.protobuf.message import Message
 from mesos.interface import mesos_pb2
@@ -26,6 +27,8 @@ class Map(dict):
             return v
 
     def __setitem__(self, k, v):
+        # if not empty?
+        # accidental __missing__ call will create a new node
         super(Map, self).__setitem__(k, self.cast(v))
 
     def __setattr__(self, k, v):
@@ -189,6 +192,10 @@ class Offer(ResourcesMixin, MessageProxy):  # important order!
 
 class TaskInfo(ResourcesMixin, MessageProxy):
     proto = mesos_pb2.TaskInfo
+
+    def __init__(self, task_id=TaskID(value=str(uuid4())), **kwargs):
+        super(TaskInfo, self).__init__(**kwargs)
+        self.task_id = task_id
 
 
 class CommandInfo(MessageProxy):

@@ -8,6 +8,14 @@ from satyr.scheduler import BaseScheduler
 
 
 @pytest.fixture
+def python_task():
+    task = PythonTask(task_id=TaskID(value='test-task-id'),
+                      fn=sum, args=[range(5)],
+                      resources=[Cpus(0.1), Mem(128), Disk(0)])
+    return task
+
+
+@pytest.fixture
 def offers():
     o1 = Offer(id=OfferID(value='first-offer'),
                slave_id=SlaveID(value='test-slave'),
@@ -18,13 +26,11 @@ def offers():
     return [o1, o2]
 
 
-def test_launch_decline(mocker, offers):
+def test_launch_decline(mocker, python_task, offers):
     driver = mocker.Mock()
     sched = BaseScheduler(name='test-scheduler')
 
-    sched.submit(sum, args=[range(5)],
-                 id=TaskID(value='test-task-id'),
-                 resources=[Cpus(0.1), Mem(128), Disk(0)])
+    sched.submit(python_task)
     sched.on_offers(driver, offers)
 
     calls = driver.launch.call_args_list
@@ -33,7 +39,7 @@ def test_launch_decline(mocker, offers):
     assert isinstance(args[0], OfferID)
     assert args[0].value == 'first-offer'
     assert isinstance(args[1][0], PythonTask)
-    assert args[1][0].id.value == 'test-task-id'
+    assert args[1][0].task_id.value == 'test-task-id'
 
     calls = driver.decline.call_args_list
     args, kwargs = calls[0]
@@ -41,21 +47,19 @@ def test_launch_decline(mocker, offers):
     assert args[0].value == 'second-offer'
 
 
-def test_status_update(mocker, offers):
+def test_status_update(mocker, python_task, offers):
     driver = mocker.Mock()
     sched = BaseScheduler(name='test-scheduler')
 
-    result = sched.submit(sum, args=[range(5)],
-                          id=TaskID(value='test-task-id'),
-                          resources=[Cpus(0.1), Mem(128), Disk(0)])
-    task = sched.tasks[0]
+    result = sched.submit(python_task)
     sched.on_offers(driver, offers)
 
-    sched.on_update(driver, task.status('TASK_RUNNING'))
+    sched.on_update(driver, python_task.status('TASK_RUNNING'))
     assert result.state == 'TASK_RUNNING'
     assert result.ready() == False
 
-    sched.on_update(driver, task.status('TASK_FINISHED', result=task()))
+    sched.on_update(driver, python_task.status('TASK_FINISHED',
+                                               result=python_task()))
     assert result.state == 'TASK_FINISHED'
     assert result.ready() == True
     assert result.successful() == True

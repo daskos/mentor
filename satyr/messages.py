@@ -38,10 +38,16 @@ class PythonTask(TaskInfo):
                  resources=[Cpus(1), Mem(64), Disk(0)], **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.resources = resources
-        self.executor.executor_id.value = str(uuid4())
+        self.executor.name = 'test-executor'
+        self.executor.executor_id.value = self.task_id.value
+        self.executor.resources = resources
         self.executor.command.value = 'python -m satyr.executor'
-        self.container.type = 'DOCKER'
-        self.container.docker.image = 'lensacom/satyr:latest'
+        self.executor.command.shell = True
+        self.executor.container.type = 'DOCKER'
+        self.executor.container.docker.image = 'lensacom/satyr:latest'
+        self.executor.container.docker.network = 'HOST'
+        self.executor.container.docker.force_pull_image = False
+
         self.callback = (fn, args, kwargs)
 
     def __call__(self):
@@ -49,7 +55,7 @@ class PythonTask(TaskInfo):
         return fn(*args, **kwargs)
 
     def status(self, state, message='', result=None):
-        return PythonTaskStatus(task_id=self.id,
+        return PythonTaskStatus(task_id=self.task_id,
                                 state=state,
                                 message=message,
                                 result=result)

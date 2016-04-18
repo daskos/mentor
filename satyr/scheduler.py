@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import atexit
+import os
 import time
 from collections import deque
 from uuid import uuid4
@@ -10,9 +11,10 @@ from mesos.native import MesosSchedulerDriver
 
 from . import log as logging
 from .interface import Scheduler
-from .messages import PythonTask
+from .messages import PythonTask, PythonTaskStatus
 from .proxies import SchedulerProxy
-from .proxies.messages import FrameworkInfo, ResourcesMixin, TaskID, encode
+from .proxies.messages import (FrameworkInfo, ResourcesMixin, TaskID, TaskInfo,
+                               encode)
 
 
 class PackError(Exception):
@@ -23,6 +25,7 @@ class AsyncResult(object):
 
     def __init__(self, state):
         self.state = state
+        self.value = None
 
     def get(self, timeout=None):
         if self.ready():
@@ -44,7 +47,7 @@ class AsyncResult(object):
 class BaseScheduler(Scheduler):
 
     # TODO envargs
-    def __init__(self, name, user='', master='zk://localhost:2181/mesos',
+    def __init__(self, name, user='', master=os.getenv('MESOS_MASTER'),
                  *args, **kwargs):
         self.framework = FrameworkInfo(name=name, user=user, **kwargs)
         self.master = master
@@ -57,10 +60,12 @@ class BaseScheduler(Scheduler):
     def run(self):
         # TODO logging
         # TODO implicit aknoladgements
+        implicit_acknowledge = 1
 
         driver = MesosSchedulerDriver(SchedulerProxy(self),
                                       encode(self.framework),
-                                      self.master)
+                                      self.master,
+                                      implicit_acknowledge)
         atexit.register(driver.stop)
 
         # run things
@@ -68,12 +73,18 @@ class BaseScheduler(Scheduler):
         driver.stop()  # Ensure that the driver process terminates.
         return status
 
-    def submit(self, fn, args=[], kwargs={}, **kwds):
-        tid = kwds.pop('id', None) or TaskID(value=str(uuid4()))
-        task = PythonTask(id=tid, fn=fn, args=args, kwargs=kwargs, **kwds)
+    def submit(self, task):  # support commandtask, pythontask etc.
+        assert isinstance(task, TaskInfo)
         self.tasks.append(task)
-        self.results[task.id.value] = AsyncResult(task.state)
-        return self.results[task.id.value]
+        self.results[task.task_id.value] = AsyncResult('TASK_STAGING')
+        return self.results[task.task_id.value]
+
+    # def submit(self, fn, args=[], kwargs={}, **kwds):
+    #     tid = kwds.pop('id', None) or TaskID(value=str(uuid4()))
+    #     task =
+    #     self.tasks.append(task)
+    #     self.results[task.id.value] = AsyncResult(task.state)
+    #     return self.results[task.id.value]
 
     def on_offers(self, driver, offers):  # default binpacking
         def pack(task, offers):
@@ -88,6 +99,9 @@ class BaseScheduler(Scheduler):
             offer, task = pack(task, offers)
         except PackError as e:
             self.tasks.append(task)
+        except IndexError as e:
+            # log empty queue
+            pass
         else:
             offers.pop(offers.index(offer))
             driver.launch(offer.id, [task])
@@ -100,7 +114,8 @@ class BaseScheduler(Scheduler):
         result.state = status.state
 
         if status.state == 'TASK_FINISHED':
-            result.value = status.result
+            if isinstance(status, PythonTaskStatus):
+                result.value = status.result
             self.results.pop(status.task_id.value)
         elif status.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED']:
             self.results.pop(status.task_id.value)

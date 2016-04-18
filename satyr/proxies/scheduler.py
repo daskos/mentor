@@ -8,11 +8,6 @@ from .. import log as logging
 from .messages import Filters, decode, encode
 
 
-# test these classes with mocking the wrapped ones
-
-# TODO add logging to all methods
-
-
 class SchedulerProxy(Scheduler):
 
     def __init__(self, scheduler):

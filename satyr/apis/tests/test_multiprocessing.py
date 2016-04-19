@@ -15,11 +15,6 @@ def feed(x, queue):
     queue.put(x)
 
 
-@pytest.fixture
-def sched():
-    return Satyr(config)
-
-
 def test_apply_async(sched):
     res1 = sched.apply_async(add, [1, 2])
     res2 = sched.apply_async(mul, [3, 5])
@@ -52,15 +47,3 @@ def test_apply_async_timeout(sched):
     with pytest.raises(TimeoutError):
         res = pool.apply_async(time.sleep, (10,))
         res.get(timeout=1)
-
-
-# # make a single worker sleep for 10 secs
-
-# class FIFOScheduler(BaseScheduler):
-
-#     resourceOffer = ResourceOfferHandler(pina=100)
-#     statusUpdate = StatusUpdateHandler()
-
-# FIFO, LIFO, Priority
-# BIN_PACKING
-# fitness

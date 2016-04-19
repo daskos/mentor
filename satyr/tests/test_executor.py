@@ -1,11 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from time import sleep
-
-import pytest
 from satyr.executor import BaseExecutor
 from satyr.messages import PythonTask, PythonTaskStatus
-from satyr.proxies.messages import CommandInfo, Cpus, Mem, TaskID, TaskInfo
 
 
 class FakeThread(object):
@@ -32,13 +28,13 @@ def test_finished_status_updates(mocker):
     status = args[0]
     assert isinstance(status, PythonTaskStatus)
     assert status.state == 'TASK_RUNNING'
-    assert status.result == None
+    assert status.data is None
 
     args, kwargs = calls[1]
     status = args[0]
     assert isinstance(status, PythonTaskStatus)
     assert status.state == 'TASK_FINISHED'
-    assert status.result == 10
+    assert status.data == 10
 
 
 def test_failed_status_updates(mocker):
@@ -59,11 +55,11 @@ def test_failed_status_updates(mocker):
     status = args[0]
     assert isinstance(status, PythonTaskStatus)
     assert status.state == 'TASK_RUNNING'
-    assert status.result == None
+    assert status.data is None
 
     args, kwargs = calls[1]
     status = args[0]
     assert isinstance(status, PythonTaskStatus)
     assert status.state == 'TASK_FAILED'
-    assert status.result == None
+    assert status.data is None
     assert status.message == 'Booom!'

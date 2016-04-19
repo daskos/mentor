@@ -1,14 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
 import cloudpickle
-import pytest
 from mesos.interface import mesos_pb2
-from satyr.messages import PythonTask, PythonTaskStatus, decode, encode
+from satyr.messages import PythonTask, PythonTaskStatus
+from satyr.proxies.messages import TaskID, decode, encode
 
 
 def test_python_task_status_decode():
-    result = {'arbitrary': 'data', 'lst': [1, 2, 3]}
-    dumped = cloudpickle.dumps(result)
+    data = {'arbitrary': 'data', 'lst': [1, 2, 3]}
+    dumped = cloudpickle.dumps(data)
 
     proto = mesos_pb2.TaskStatus(
         data=dumped,
@@ -18,26 +18,26 @@ def test_python_task_status_decode():
 
     assert isinstance(status, PythonTaskStatus)
     assert status['data'] == dumped
-    assert status.result == result
+    assert status.data == data
 
     proto = mesos_pb2.TaskStatus(
         labels=mesos_pb2.Labels(
             labels=[mesos_pb2.Label(key='python')]))
     status = decode(proto)
-    status.result = result
+    status.data = data
 
     assert isinstance(status, PythonTaskStatus)
-    assert status.result == result
+    assert status.data == data
     assert status['data'] == dumped
 
 
 def test_python_task_status_encode():
-    result = {'arbitrary': 'data', 'value': 5}
-    dumped = cloudpickle.dumps(result)
+    data = {'arbitrary': 'data', 'value': 5}
+    dumped = cloudpickle.dumps(data)
 
     status = PythonTaskStatus(task_id={'value': 'test-id'},
                               state='TASK_STAGING',
-                              result=result)
+                              data=data)
 
     proto = encode(status)
     assert isinstance(proto, mesos_pb2.TaskStatus)
@@ -47,7 +47,7 @@ def test_python_task_status_encode():
 
     status = PythonTaskStatus(task_id={'value': 'test-id'},
                               state='TASK_RUNNING')
-    status.result = result
+    status.data = data
     proto = encode(status)
     assert isinstance(proto, mesos_pb2.TaskStatus)
     assert proto.data == dumped
@@ -57,8 +57,8 @@ def test_python_task_status_encode():
 
 def test_python_task_decode():
     fn, args, kwargs = sum, [range(5)], {}
-    callback = (fn, args, kwargs)
-    dumped = cloudpickle.dumps(callback)
+    data = (fn, args, kwargs)
+    dumped = cloudpickle.dumps(data)
 
     proto = mesos_pb2.TaskInfo(
         data=dumped,
@@ -68,34 +68,34 @@ def test_python_task_decode():
 
     assert isinstance(task, PythonTask)
     assert task['data'] == dumped
-    assert task.callback == callback
+    assert task.data == data
 
     proto = mesos_pb2.TaskInfo(
         labels=mesos_pb2.Labels(
             labels=[mesos_pb2.Label(key='python')]))
     task = decode(proto)
-    task.callback = callback
+    task.data = data
 
     assert isinstance(task, PythonTask)
-    assert task.callback == callback
+    assert task.data == data
     assert task['data'] == dumped
 
 
 def test_python_task_encode():
     fn, args, kwargs = sum, [range(5)], {}
-    callback = (fn, args, kwargs)
-    dumped = cloudpickle.dumps(callback)
+    data = (fn, args, kwargs)
+    dumped = cloudpickle.dumps(data)
 
     task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                      task_id={'value': 'test-id'})
+                      id={'value': 'test-id'})
 
     proto = encode(task)
     assert isinstance(proto, mesos_pb2.TaskInfo)
     assert proto.data == dumped
     assert proto.task_id.value == 'test-id'
 
-    task = PythonTask(task_id={'value': 'test-id'})
-    task.callback = callback
+    task = PythonTask(id=TaskID(value='test-id'))
+    task.data = data
     proto = encode(task)
     assert isinstance(proto, mesos_pb2.TaskInfo)
     assert proto.data == dumped
@@ -105,13 +105,13 @@ def test_python_task_encode():
 def test_python_task_execution():
     fn, args, kwargs = sum, [range(5)], {}
     task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                      task_id={'value': 'test-id'})
+                      id={'value': 'test-id'})
     task = decode(encode(task))
     assert task() == 10
 
     def fn(lst1, lst2):
         return sum(lst1) - sum(lst2)
     args = [range(5), range(3)]
-    task = PythonTask(fn=fn, args=args, task_id={'value': 'test-id'})
+    task = PythonTask(fn=fn, args=args, id={'value': 'test-id'})
     task = decode(encode(task))
     assert task() == 7

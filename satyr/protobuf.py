@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-import base64
+# import base64
 from copy import copy
 from functools import partial
 
@@ -93,7 +93,7 @@ def protobuf_to_dict(pb, containers=CONTAINER_MAP, converters=TYPE_CALLABLE_MAP)
 
 
 def dict_to_protobuf(dct, pb=None, containers=CONTAINER_MAP,
-                     converters=REVERSE_TYPE_CALLABLE_MAP):
+                     converters=REVERSE_TYPE_CALLABLE_MAP, strict=True):
     default = container_to_message(dct, containers)
     if pb:
         if default:
@@ -103,7 +103,14 @@ def dict_to_protobuf(dct, pb=None, containers=CONTAINER_MAP,
     pb = pb if isinstance(pb, Message) else pb()
 
     for k, v in dct.items():
-        field = pb.DESCRIPTOR.fields_by_name[k]
+        try:
+            # TODO silently skip undifened fields
+            field = pb.DESCRIPTOR.fields_by_name[k]
+        except:
+            if not strict:
+                continue
+            else:
+                raise
         pb_value = getattr(pb, k, None)
         if field.label == FieldDescriptor.LABEL_REPEATED:
             for item in v:

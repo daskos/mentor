@@ -2,8 +2,8 @@ import pytest
 from mesos.interface import mesos_pb2
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
                                     FrameworkInfo, Map, Mem, MessageProxy,
-                                    Offer, RegisterProxies, ResourcesMixin,
-                                    TaskID, TaskInfo, decode, encode)
+                                    Offer, RegisterProxies, TaskID, TaskInfo,
+                                    TaskStatus, decode, encode)
 
 
 @pytest.fixture
@@ -74,6 +74,29 @@ def test_map_set_missing(d):
     assert m.y.w.o == 6
 
 
+def test_hash():
+    d1 = Map(a=Map(b=3), c=5)
+    d2 = Map(a=Map(b=3), c=5)
+    d3 = Map(a=Map(b=6), c=5)
+
+    assert hash(d1) == hash(d2)
+    assert hash(d1) != hash(d3)
+    assert hash(d2) != hash(d3)
+
+
+def test_dict_hashing():
+    d1 = Map(a=Map(b=3), c=5)
+    d2 = Map(a=Map(b=3), c=5)
+    d3 = Map(a=Map(b=6), c=5)
+
+    c = {}
+    c[d2.a] = d2
+    c[d3.a] = d3
+
+    assert c[d2.a] == d2
+    assert c[d3.a] == d3
+
+
 def test_register_proxies():
     class Base(object):
         __metaclass__ = RegisterProxies
@@ -113,7 +136,7 @@ def test_encode_resources():
 
 def test_encode_task_info():
     task = TaskInfo(name='test-task',
-                    task_id=TaskID(value='test-task-id'),
+                    id=TaskID(value='test-task-id'),
                     resources=[Cpus(0.1), Mem(16)],
                     command=CommandInfo(value='testcmd'))
     pb = encode(task)
@@ -169,3 +192,33 @@ def test_resources_mixin():
     assert o2 >= t1
     assert o2 >= t2
     assert t2 >= o1
+
+
+def test_encode_task_info():
+    t = TaskInfo(name='test-task',
+                 id=TaskID(value='test-task-id'),
+                 resources=[Cpus(0.1), Mem(16)],
+                 command=CommandInfo(value='echo 100'))
+
+    p = encode(t)
+    assert isinstance(p, mesos_pb2.TaskInfo)
+    assert p.command.value == 'echo 100'
+    assert p.name == 'test-task'
+    assert p.resources[0].name == 'cpus'
+    assert p.resources[0].scalar.value == 0.1
+    assert p.task_id.value == 'test-task-id'
+
+
+def test_non_strict_encode_task_info():
+    t = TaskInfo(name='test-task',
+                 id=TaskID(value='test-task-id'),
+                 resources=[Cpus(0.1), Mem(16)],
+                 command=CommandInfo(value='echo 100'))
+    t.result = 'some binary data'
+    t.status = TaskStatus()
+
+    p = encode(t)
+    assert isinstance(p, mesos_pb2.TaskInfo)
+    assert p.command.value == 'echo 100'
+    with pytest.raises(AttributeError):
+        p.status

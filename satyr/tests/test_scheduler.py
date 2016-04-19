@@ -2,14 +2,14 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 from satyr.messages import PythonTask
-from satyr.proxies.messages import (CommandInfo, Cpus, Disk, Mem, Offer,
-                                    OfferID, SlaveID, TaskID, TaskInfo)
+from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
+                                    TaskID)
 from satyr.scheduler import BaseScheduler
 
 
 @pytest.fixture
 def python_task():
-    task = PythonTask(task_id=TaskID(value='test-task-id'),
+    task = PythonTask(id=TaskID(value='test-task-id'),
                       fn=sum, args=[range(5)],
                       resources=[Cpus(0.1), Mem(128), Disk(0)])
     return task
@@ -51,16 +51,15 @@ def test_status_update(mocker, python_task, offers):
     driver = mocker.Mock()
     sched = BaseScheduler(name='test-scheduler')
 
-    result = sched.submit(python_task)
+    sched.submit(python_task)
     sched.on_offers(driver, offers)
 
     sched.on_update(driver, python_task.status('TASK_RUNNING'))
-    assert result.state == 'TASK_RUNNING'
-    assert result.ready() == False
+    assert python_task.state.state == 'TASK_RUNNING'
+    assert python_task.result() is None
 
     sched.on_update(driver, python_task.status('TASK_FINISHED',
-                                               result=python_task()))
-    assert result.state == 'TASK_FINISHED'
-    assert result.ready() == True
-    assert result.successful() == True
-    assert result.get() == 10
+                                               data=python_task()))
+    assert python_task.state.state == 'TASK_FINISHED'
+    assert python_task.state.is_successful() is True
+    assert python_task.result() == 10

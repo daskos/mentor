@@ -14,89 +14,35 @@ from ..scheduler import BaseScheduler
 from ..utils import run_daemon
 
 
-# class Process(TaskInfo):
-
-#     def __init__(self, target, name=None, args=[], kwargs={})
-#         self.name = name
-#         self.daemon = False
-#         self.pid = None
-
-#     def terminate(self):
-#         pass
-
-#     def run(self):
-#         pass
-
-#     def start(self):
-#         # create single task scheduler and submit task itself
-#         pass
-
-#     def join(timeout=None):
-#         pass
-
-#     def is_alive(self):
-#         pass
-
-
-# class SatyrAsyncResult(AsyncResult):
-#     FLAG_READY = 0
-#     FLAG_SUCCESSFUL = 1
-
-#     def __init__(self, satyr, task):
-#         self.satyr = satyr
-#         self.task = copy.copy(task)
-#         self.flags = ()
-
-#     def get(self, timeout=None):
-#         self.wait(timeout)
-#         return self.satyr.results.get(self.task['id'], None)
-
-#     def wait(self, timeout=None):
-#         while not self.ready():
-#             sleep(1)
-#             print('[%s] Waiting to get ready...' % self.task['id'])
-
-#     def ready(self):
-#         return self.FLAG_READY in self.flags
-
-#     def successful(self):
-# return self.FLAG_READY in self.flags and self.FLAG_SUCCESSFUL in
-# self.flags
-
-#     def update_status(self, task, is_successful):
-#         if not self.task['id'] == task.task_id.value:
-#             return
-#         self.flags = self.flags + \
-#             (self.FLAG_SUCCESSFUL,) if is_successful else self.flags
-
-
 class AsyncResult(object):
 
-    def __init__(self):
+    def __init__(self, state):
+        self.state = state
         self.value = None
 
     def get(self, timeout=None):
-        pass
+        if self.ready():
+            return self.value
+        else:
+            raise ValueError('Async result not ready!')
 
     def wait(self, timeout=None):
-        pass
+        while not self.ready():
+            time.sleep(0.1)
 
     def ready(self):
-        pass
+        return self.state not in ['TASK_STAGING', 'TASK_RUNNING']
 
     def successful(self):
-        pass
+        return self.state in ['TASK_FINISHED']
 
 
 class Pool(BaseScheduler):
 
     def __init__(self, processes=-1, *args, **kwargs):
         self.processes = processes
-        self.tasks = deque()
-        self.results = {}
-        self.callbacks = {}
         super(Pool, self).__init__(*args, **kwargs)
-        run_daemon('Mesos Multiprocessing Pool Scheduler', self)
+        self.daemonize()
 
     def close(self):
         pass
@@ -107,55 +53,20 @@ class Pool(BaseScheduler):
     def join(self):
         pass
 
-    def on_offers(self, driver, offers):
-        # max paralellism determined by self.processes
-        try:
-            task = self.tasks.pop()
-        except:
-            pass
-        else:
-            launched = False
-            for offer in offers:
-                if offer > task:
-                    task.slave_id = offer.slave_id
-                    driver.launch(offer.id, [task])
-                    launched = True
-                else:
-                    driver.decline(offer.id)
-            if not launched:
-                self.tasks.append(task)
-
-    def on_update(self, driver, status):
-        def pop(task_id):
-            result = self.results.pop(status.task_id.value, None)
-            callback = self.callbacks.pop(status.task_id.value, None)
-            return result, callback
-
-        if status.state == 'TASK_FINISHED':
-            result, callback = pop(status.task_id.value)
-            result.value = status.data
-            if callback:
-                callback()
-        elif status.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED']:
-            result, callback = pop(status.task_id.value)
-
-        if len(self.tasks) == 0 and len(self.results) == 0:
-            driver.stop()
-
     def map(self, func, iterable, chunksize=1):
-        pass
+        results = self.map_async(func, iterable, chunksize, callback)
+        if callback_finished:  # indicating computation finished on all elements
+            # block until completion
+            return results
 
     def map_async(self, func, iterable, chunksize=1, callback=None):
-        pass
+        return map(partial(self.apply_async, func=func), iterable)  # TODO
 
     def apply(self, func, args=[], kwds={}):
         pass
 
     def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
-        task = PythonTask(fn=func, args=args, kwargs=kwds, **kwargs)
+        task = PythonTask(fn=func, args=args, kwargs=kwds, on_success=callback,
+                          **kwargs)
 
-        self.tasks.append(task)
-        self.callbacks[task.id.value] = callback
-
-        self.results[task.id.value] = AsyncResult()
-        return self.results[task.id.value]
+        return self.submit(task)

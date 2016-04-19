@@ -41,7 +41,7 @@ class BaseExecutor(Executor):
             except Exception as e:
                 driver.update(task.status('TASK_FAILED', message=e.message))
             else:
-                driver.update(task.status('TASK_FINISHED', result=result))
+                driver.update(task.status('TASK_FINISHED', data=result))
 
         thread = threading.Thread(target=run_task)
         thread.start()

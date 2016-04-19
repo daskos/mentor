@@ -1,7 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import json
-
 import pytest
 from sample_pb2 import MessageOfTypes
 from satyr.protobuf import dict_to_protobuf, protobuf_to_dict
@@ -114,6 +112,19 @@ def test_incomplete(m):
     m2 = dict_to_protobuf(d, MessageOfTypes)
     assert m2.dubl == 0
     assert m != m2
+
+
+def test_non_strict(m):
+    d = protobuf_to_dict(m)
+    d['non_existing_field'] = 'data'
+    d['temporary_field'] = 'helping_state'
+
+    with pytest.raises(KeyError):
+        dict_to_protobuf(d, MessageOfTypes)
+
+    m2 = dict_to_protobuf(d, MessageOfTypes, strict=False)
+    with pytest.raises(AttributeError):
+        m2.temporary_field
 
 
 def test_pass_instance(m):

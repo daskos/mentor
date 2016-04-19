@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import sys
 
-from mesos.interface import Executor, ExecutorDriver
+from mesos.interface import Executor
 
-from .. import log as logging
 from .messages import decode, encode
 
 

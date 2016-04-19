@@ -46,7 +46,7 @@ class Map(dict):
         return self[k]
 
     def __hash__(self):
-        return hash(frozenset(self))
+        return hash(tuple(self.items()))
 
 
 class RegisterProxies(type):
@@ -182,8 +182,14 @@ class Filters(MessageProxy):
 class TaskStatus(MessageProxy):
     proto = mesos_pb2.TaskStatus
 
-    def is_finished(self):
+    def is_successful(self):
         return self.state == 'TASK_FINISHED'
+
+    def is_failed(self):
+        return self.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED']
+
+    def is_terminated(self):
+        return self.is_successful() or self.is_failed()
 
 
 class Offer(ResourcesMixin, MessageProxy):  # important order!
@@ -193,9 +199,23 @@ class Offer(ResourcesMixin, MessageProxy):  # important order!
 class TaskInfo(ResourcesMixin, MessageProxy):
     proto = mesos_pb2.TaskInfo
 
-    def __init__(self, task_id=TaskID(value=str(uuid4())), **kwargs):
+    def __init__(self, id=TaskID(value=str(uuid4())), **kwargs):
         super(TaskInfo, self).__init__(**kwargs)
-        self.task_id = task_id
+        self.id = id
+
+    @property
+    def id(self):  # more consistent naming
+        return self.task_id
+
+    @id.setter
+    def id(self, value):
+        self.task_id = value
+
+    def status(self, state, **kwargs):  # used on executor side
+        return TaskStatus(task_id=self.task_id, state=state, **kwargs)
+
+    def update(self, status):  # used on scheduler side
+        pass
 
 
 class CommandInfo(MessageProxy):
@@ -214,5 +234,6 @@ class Operation(MessageProxy):
     proto = mesos_pb2.Offer.Operation
 
 
-encode = partial(protobuf.encode, containers=MessageProxy.registry)
+encode = partial(
+    protobuf.encode, containers=MessageProxy.registry, strict=False)
 decode = partial(protobuf.decode, containers=MessageProxy.registry)

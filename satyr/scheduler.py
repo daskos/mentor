@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import atexit
 import logging
 import os
+import signal
 import time
 from collections import deque
 
@@ -19,37 +20,62 @@ class PackError(Exception):
     pass
 
 
-class BaseScheduler(Scheduler):
+class Running(object):
+
+    def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
+                 implicit_acknowledge=1, *args, **kwargs):
+        scheduler = SchedulerProxy(scheduler)
+        framework = FrameworkInfo(name=name, user=user, *args, **kwargs)
+        self.driver = MesosSchedulerDriver(scheduler, encode(framework),
+                                           master, implicit_acknowledge)
+
+        def shutdown(signal, frame):
+            self.driver.stop()
+        signal.signal(signal.SIGINT, shutdown)
+        signal.signal(signal.SIGTERM, shutdown)
+        atexit.register(self.driver.stop)
+
+    def run(self):
+        return self.driver.run()
+
+    def start(self):
+        status = self.driver.start()
+        assert status == mesos_pb2.DRIVER_RUNNING
+        return status
+
+    def stop(self):
+        logging.info("Stopping Mesos driver")
+        self.driver.stop()
+        logging.info("Joining Mesos driver")
+        result = self.driver.join()
+        logging.info("Joined Mesos driver")
+        if result != mesos_pb2.DRIVER_STOPPED:
+            raise RuntimeError("Mesos driver failed with %i", result)
+
+    def join(self):
+        return self.driver.join()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.stop()
+
+
+class QueueScheduler(Scheduler):
 
     # TODO envargs
-    def __init__(self, name, user='', master=os.getenv('MESOS_MASTER'),
-                 *args, **kwargs):
-        self.framework = FrameworkInfo(name=name, user=user, **kwargs)
-        self.master = master
+    def __init__(self, *args, **kwargs):
         self.queue = deque()  # holding unscheduled tasks
         self.running = {}  # holding task_id => task pairs
 
-    def __call__(self):
-        return self.run()
+    def is_idle(self):
+        return not len(self.queue) and not len(self.running)
 
-    def daemonize(self):
-        run_daemon('Scheduler Process', self)
-
-    def run(self):
-        # TODO logging
-        # TODO implicit aknoladgements
-        implicit_acknowledge = 1
-
-        driver = MesosSchedulerDriver(SchedulerProxy(self),
-                                      encode(self.framework),
-                                      self.master,
-                                      implicit_acknowledge)
-        atexit.register(driver.stop)
-
-        # run things
-        status = 0 if driver.run() == mesos_pb2.DRIVER_STOPPED else 1
-        driver.stop()  # Ensure that the driver process terminates.
-        return status
+    def wait(self):
+        while not self.is_idle():
+            time.sleep(0.1)
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
@@ -98,7 +124,6 @@ class BaseScheduler(Scheduler):
 
 
 if __name__ == '__main__':
-    from .utils import run_daemon
-
-    scheduler = BaseScheduler(name='Base')
-    scheduler.daemonize()
+    scheduler = QueueScheduler()
+    with Running(scheduler, name='test') as fw:
+        scheduler.wait()

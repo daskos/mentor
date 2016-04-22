@@ -4,7 +4,7 @@ import pytest
 from satyr.messages import PythonTask
 from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
                                     TaskID)
-from satyr.scheduler import BaseScheduler
+from satyr.scheduler import QueueScheduler, Running
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def offers():
 
 def test_launch_decline(mocker, python_task, offers):
     driver = mocker.Mock()
-    sched = BaseScheduler(name='test-scheduler')
+    sched = QueueScheduler(name='test-scheduler')
 
     sched.submit(python_task)
     sched.on_offers(driver, offers)
@@ -47,19 +47,23 @@ def test_launch_decline(mocker, python_task, offers):
     assert args[0].value == 'second-offer'
 
 
-def test_status_update(mocker, python_task, offers):
+def test_task_result(mocker, python_task, offers):
     driver = mocker.Mock()
-    sched = BaseScheduler(name='test-scheduler')
+    sched = QueueScheduler(name='test-scheduler')
 
     sched.submit(python_task)
     sched.on_offers(driver, offers)
 
     sched.on_update(driver, python_task.status('TASK_RUNNING'))
-    assert python_task.state.state == 'TASK_RUNNING'
-    assert python_task.result() is None
-
     sched.on_update(driver, python_task.status('TASK_FINISHED',
                                                data=python_task()))
-    assert python_task.state.state == 'TASK_FINISHED'
-    assert python_task.state.is_successful() is True
-    assert python_task.result() == 10
+    assert python_task.result == 10
+
+
+# integration test
+def test_runner_context_manager():
+    sched = QueueScheduler(name='test-scheduler')
+    with Running(sched, name='test-scheduler'):
+        sched.wait()
+
+    assert sched

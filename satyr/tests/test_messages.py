@@ -115,3 +115,51 @@ def test_python_task_execution():
     task = PythonTask(fn=fn, args=args, id={'value': 'test-id'})
     task = decode(encode(task))
     assert task() == 7
+
+
+# def test_python_task_default_callbacks(mocker):
+#     fn, args, kwargs = sum, [range(5)], {}
+
+#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
+#     mocker.spy(task, 'on_update')
+#     mocker.spy(task, 'on_success')
+#     mocker.spy(task, 'on_fail')
+#     status = PythonTaskStatus(state='TASK_FINISHED', data=20)
+#     task.update(status)
+#     task.on_update.assert_called_with(status)
+#     task.on_success.assert_called_with(status)
+#     assert task.result == 20
+
+#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
+#     mocker.spy(task, 'on_update')
+#     mocker.spy(task, 'on_success')
+#     mocker.spy(task, 'on_fail')
+#     status = PythonTaskStatus(state='TASK_KILLED')
+#     task.update(status)
+#     task.on_update.assert_called_with(status)
+#     task.on_fail.assert_called_with(status)
+
+
+# def test_python_task_custom_callbacks(mocker):
+#     fn, args, kwargs = sum, [range(5)], {}
+
+#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
+#     task.on_success = mocker.Mock()
+#     task.on_fail = mocker.Mock()
+#     task.on_update = mocker.Mock()
+
+#     status = PythonTaskStatus(state='TASK_FINISHED')
+#     task.update(status)
+#     task.on_update.assert_called_with(status)
+#     task.on_fail.assert_called_with(status)
+
+#     mock = mocker.Mock()
+#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
+#     task.on_success = mock.on_success
+#     task.on_fail = mock.on_fail
+#     task.on_update = mock.on_update
+
+#     status = PythonTaskStatus(state='TASK_FAILED')
+#     task.update(status)
+#     mock.on_update.assert_called_with(status)
+#     mock.on_fail.assert_called_with(status)

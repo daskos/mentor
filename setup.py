@@ -4,6 +4,8 @@ from os.path import exists
 
 from setuptools import setup
 
+# todo add bin/satyr
+
 setup(name='satyr',
       version='0.1',
       description='A Mesos framework library mimicing multiprocessing',

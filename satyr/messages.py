@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 from uuid import uuid4
 
 import cloudpickle
@@ -37,7 +38,7 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 resources=[Cpus(1), Mem(64)], on_success=None, **kwds):
+                 resources=[Cpus(1), Mem(64)], **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.resources = resources
         # self.executor.name = 'test-executor'
@@ -51,7 +52,6 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
         self.executor.container.docker.force_pull_image = False
 
         self.data = (fn, args, kwargs)  # TODO: assert fn is callable
-        self.on_success = on_success  # TODO: assert is callable
 
     def __call__(self):
         fn, args, kwargs = self.data
@@ -60,12 +60,11 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
     def status(self, state, **kwargs):
         return PythonTaskStatus(task_id=self.task_id, state=state, **kwargs)
 
-    def update(self, status):
-        self.state = status
+    def on_update(self, status):
+        self.state = status.state
 
-        if status.is_successful() and callable(self.on_success):
-            self.on_success(self)
+    def on_success(self, status):
+        self.result = status.data
 
-    def result(self):
-        if self.state.is_successful():
-            return self.state.data
+    def on_fail(self, status):
+        pass

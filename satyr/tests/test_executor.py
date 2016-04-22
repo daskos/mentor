@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from satyr.executor import BaseExecutor
+from satyr.executor import OneOffExecutor, Running
 from satyr.messages import PythonTask, PythonTaskStatus
 
 
@@ -19,7 +19,7 @@ def test_finished_status_updates(mocker):
     driver = mocker.Mock()
     task = PythonTask(fn=sum, args=[range(5)])
 
-    executor = BaseExecutor()
+    executor = OneOffExecutor()
     executor.on_launch(driver, task)
 
     calls = driver.update.call_args_list
@@ -46,7 +46,7 @@ def test_failed_status_updates(mocker):
     driver = mocker.Mock()
     task = PythonTask(fn=failing_function, args=['arbitrary', 'args'])
 
-    executor = BaseExecutor()
+    executor = OneOffExecutor()
     executor.on_launch(driver, task)
 
     calls = driver.update.call_args_list
@@ -63,3 +63,12 @@ def test_failed_status_updates(mocker):
     assert status.state == 'TASK_FAILED'
     assert status.data is None
     assert status.message == 'Booom!'
+
+
+# integration test
+# def test_runner_context_manager():
+#     executor = OneOffExecutor()
+#     with Running(executor):
+#         pass
+
+#     assert executor

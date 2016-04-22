@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 from functools import partial
 from uuid import uuid4
 
@@ -41,7 +42,7 @@ class Map(dict):
     def __getattr__(self, k):
         return self[k]
 
-    def __missing__(self, k):
+    def __missing__(self, k):  # TODO: consider not using this, silents errors
         self[k] = Map()
         return self[k]
 
@@ -214,7 +215,22 @@ class TaskInfo(ResourcesMixin, MessageProxy):
     def status(self, state, **kwargs):  # used on executor side
         return TaskStatus(task_id=self.task_id, state=state, **kwargs)
 
-    def update(self, status):  # used on scheduler side
+    def update(self, status):
+        logging.info('task.status called with {}'.format(status.state))
+        self.on_update(status)
+
+        if status.is_successful():
+            self.on_success(status)
+        elif status.is_failed():
+            self.on_fail(status)
+
+    def on_update(self, status):
+        pass
+
+    def on_success(self, status):
+        pass
+
+    def on_fail(self, status):
         pass
 
 
@@ -234,6 +250,6 @@ class Operation(MessageProxy):
     proto = mesos_pb2.Offer.Operation
 
 
-encode = partial(
-    protobuf.encode, containers=MessageProxy.registry, strict=False)
 decode = partial(protobuf.decode, containers=MessageProxy.registry)
+encode = partial(protobuf.encode, containers=MessageProxy.registry,
+                 strict=False)

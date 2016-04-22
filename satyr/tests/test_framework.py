@@ -4,7 +4,7 @@ import pytest
 from satyr.messages import PythonTask
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, Mem, TaskID,
                                     TaskInfo)
-from satyr.scheduler import BaseScheduler
+from satyr.scheduler import QueueScheduler, Running
 
 
 @pytest.fixture
@@ -37,10 +37,12 @@ def docker_python():
 
 
 def test_command(mocker, command):
-    sched = BaseScheduler(name='test-scheduler')
+    sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
-    sched.submit(command)
-    sched.run()
+
+    with Running(sched, name='test-scheduler'):
+        sched.submit(command)
+        sched.wait()  # block until all tasks finishes
 
     calls = sched.on_update.call_args_list
     assert len(calls) == 2
@@ -55,10 +57,12 @@ def test_command(mocker, command):
 
 
 def test_docker_command(mocker, docker_command):
-    sched = BaseScheduler(name='test-scheduler')
+    sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
-    sched.submit(docker_command)
-    sched.run()
+
+    with Running(sched, name='test-scheduler'):
+        sched.submit(docker_command)
+        sched.wait()  # block until all tasks finishes
 
     calls = sched.on_update.call_args_list
     assert len(calls) == 2
@@ -73,10 +77,12 @@ def test_docker_command(mocker, docker_command):
 
 
 def test_docker_python(mocker, docker_python):
-    sched = BaseScheduler(name='test-scheduler')
+    sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
-    sched.submit(docker_python)
-    sched.run()
+
+    with Running(sched, name='test-scheduler'):
+        sched.submit(docker_python)
+        sched.wait()  # block until all tasks finishes
 
     calls = sched.on_update.call_args_list
     assert len(calls) == 2
@@ -91,8 +97,9 @@ def test_docker_python(mocker, docker_python):
 
 
 def test_docker_python_result(mocker, docker_python):
-    sched = BaseScheduler(name='test-scheduler')
-    sched.submit(docker_python)
-    sched.run()
+    sched = QueueScheduler()
+    with Running(sched, name='test-scheduler'):
+        sched.submit(docker_python)
+        sched.wait()  # block until all tasks finishes
 
-    assert docker_python.result() == 10
+    assert docker_python.result == 10

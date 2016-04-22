@@ -40,63 +40,64 @@ def envargs(fn, prefix='', envs=os.environ):
     return wrapper
 
 
-def catch(func, exception_sender):
-    """Closure that calls given func, if an error is raised, send it somewhere.
+# def catch(func, exception_sender):
+#     """Closure that calls given func, if an error is raised, send it somewhere.
 
-    `func` function to call
-    `exception_sender` a writable end of a multiprocessing.Pipe
-    """
-    def f(*args, **kwargs):
-        try:
-            func(*args, **kwargs)
-        except Exception as e:
-            logging.exception(e)
-            exception_sender.send(e)
-    return f
-
-
-def set_signals(process):
-    """Kill child processes on sigint or sigterm"""
-    def kill_children(signal, frame):
-        logging.error('Received a signal that is trying to terminate this '
-                      'process.', extra=dict(signal=signal))
-        try:
-            process.terminate()
-            logging.info('terminated process',
-                         extra=dict(name=process.name, pid=process.pid))
-        except:
-            logging.exception('could not terminate subprocess',
-                              extra=dict(name=process.name, pid=process.pid))
-        sys.exit(1)
-    signal.signal(signal.SIGTERM, kill_children)
-    signal.signal(signal.SIGINT, kill_children)
+#     `func` function to call
+#     `exception_sender` a writable end of a multiprocessing.Pipe
+#     """
+#     def f(*args, **kwargs):
+#         try:
+#             func(*args, **kwargs)
+#         except Exception as e:
+#             logging.exception(e)
+#             exception_sender.send(e)
+#     return f
 
 
-def run_daemon(name, target, kwargs=dict()):
-    exception_receiver, exception_sender = mp.Pipe(False)
+# def set_signals(process):
+#     """Kill child processes on sigint or sigterm"""
+#     def kill_children(signal, frame):
+#         logging.error('Received a signal that is trying to terminate this '
+#                       'thread.', extra=dict(signal=signal))
+#         try:
+#             driver.stop()
+#             logging.info('terminated thread',
+#                          extra=dict(name=process.name, pid=process.pid))
+#         except:
+#             logging.exception('could not terminate thread',
+#                               extra=dict(name=process.name, pid=process.pid))
+#         sys.exit(1)
+#     signal.signal(signal.SIGTERM, kill_children)
+#     signal.signal(signal.SIGINT, kill_children)
 
-    subproc = mp.Process(target=catch(target, exception_sender),
-                         kwargs=kwargs,
-                         name=name)
-    subproc.start()
-    set_signals(subproc)
 
-    while True:
-        if exception_receiver.poll():
-            exception_receiver.recv()
-            logging.error('Terminating child process because it raised an '
-                          'exception', extra=dict(is_alive=subproc.is_alive()))
-            break
-        if not subproc.is_alive():
-            logging.error('Daemon process died and didn\'t notify me of its '
-                          'exception. This may be a code bug. Check logs!',
-                          extra=dict())
-            break
-        # save cpu cycles by checking for subprocess failures less often
-        time.sleep(1)
+# def run_daemon(name, target, kwargs=dict()):
+#     #exception_receiver, exception_sender = mp.Pipe(False)
 
-    subproc.terminate()
-    sys.exit(1)
+#     thread = Thread(target=target, kwargs=kwargs, name=name)
+#     thread.start()
+#     set_signals(thread)
+
+#     return thread
+#     # return subproc
+
+#     # while True:
+#     #     if exception_receiver.poll():
+#     #         exception_receiver.recv()
+#     #         logging.error('Terminating child process because it raised an '
+#     #                       'exception', extra=dict(is_alive=subproc.is_alive()))
+#     #         break
+#     #     if not subproc.is_alive():
+#     #         logging.error('Daemon process died and didn\'t notify me of its '
+#     #                       'exception. This may be a code bug. Check logs!',
+#     #                       extra=dict())
+#     #         break
+#     #     # save cpu cycles by checking for subprocess failures less often
+#     #    time.sleep(1)
+
+#     # subproc.terminate()
+#     # sys.exit(1)
 
 
 def configure_logging(add_handler, log):

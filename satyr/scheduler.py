@@ -22,6 +22,7 @@ class PackError(Exception):
 
 class Running(object):
 
+    # TODO: envargs
     def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
                  implicit_acknowledge=1, *args, **kwargs):
         scheduler = SchedulerProxy(scheduler)
@@ -65,7 +66,6 @@ class Running(object):
 
 class QueueScheduler(Scheduler):
 
-    # TODO envargs
     def __init__(self, *args, **kwargs):
         self.queue = deque()  # holding unscheduled tasks
         self.running = {}  # holding task_id => task pairs
@@ -81,7 +81,7 @@ class QueueScheduler(Scheduler):
         assert isinstance(task, TaskInfo)
         self.queue.append(task)
 
-    def on_offers(self, driver, offers):  # binpacking should be the default
+    def on_offers(self, driver, offers):  # TODO: binpacking should be the default
         def pack(task, offers):
             for offer in offers:
                 if offer >= task:
@@ -95,10 +95,10 @@ class QueueScheduler(Scheduler):
             task = self.queue.pop()
             offer, task = pack(task, offers)
         except PackError as e:
-            # should reschedule if any error occurs at launch too
+            # TODO: should reschedule if any error occurs at launch too
             self.tasks.append(task)
         except IndexError as e:
-            # log empty queue
+            # TODO: log empty queue
             pass
         else:
             offers.pop(offers.index(offer))

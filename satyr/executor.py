@@ -1,33 +1,83 @@
-import threading
+from __future__ import absolute_import, division, print_function
 
-import driver
-from mesos.interface import Executor, mesos_pb2
+import atexit
+import logging
+import signal
+import sys
+import threading
+import time
+
+from mesos.interface import mesos_pb2
 from mesos.native import MesosExecutorDriver
 
+from .interface import Executor
+from .messages import PythonTask  # important to register classes
+from .proxies import ExecutorProxy
 
-class SatyrExecutor(Executor):
-    ALLOWED_HANDLERS = ['runTask']
 
-    def __init__(self, run_task):
-        self.run_task = run_task
+class Running(object):
 
-    def launchTask(self, driver, task):
-        driver.sendStatusUpdate(self.create_status_update(
-            task, mesos_pb2.TASK_STARTING))
-        thread = threading.Thread(target=self.run_task, args=(self, driver, task))
-        thread.start()
+    def __init__(self, executor):
+        executor = ExecutorProxy(executor)
+        self.driver = MesosExecutorDriver(executor)
 
-    def create_status_update(self, task, state):
-        update = mesos_pb2.TaskStatus()
-        update.task_id.value = task.task_id.value
-        update.state = state
-        return update
+        def shutdown(signal, frame):
+            #logging.info("Shutdown signal")
+            self.driver.stop()
 
-    def send_status_update(self, driver, task, state):
-        driver.sendStatusUpdate(self.create_status_update(task, state))
-
-    def send_framework_message(self, driver, message):
-        driver.sendFrameworkMessage(message)
+        signal.signal(signal.SIGINT, shutdown)
+        signal.signal(signal.SIGTERM, shutdown)
+        atexit.register(self.driver.stop)
 
     def run(self):
-        driver.run(MesosExecutorDriver(self))
+        return self.driver.run()
+
+    def start(self):
+        status = self.driver.start()
+        assert status == mesos_pb2.DRIVER_RUNNING
+        return status
+
+    def stop(self):
+        logging.info("Stopping Mesos driver")
+        self.driver.stop()
+        logging.info("Joining Mesos driver")
+        result = self.driver.join()
+        logging.info("Joined Mesos driver")
+        if result != mesos_pb2.DRIVER_STOPPED:
+            raise RuntimeError("Mesos driver failed with %i", result)
+
+    def join(self):
+        self.driver.join()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.stop()
+
+
+class OneOffExecutor(Executor):
+
+    def on_launch(self, driver, task):
+        def run_task():
+            driver.update(task.status('TASK_RUNNING'))
+
+            try:
+                result = task()
+            except Exception as e:
+                driver.update(task.status('TASK_FAILED', message=e.message))
+            else:
+                driver.update(task.status('TASK_FINISHED', data=result))
+
+        thread = threading.Thread(target=run_task)
+        thread.start()
+
+    def on_kill(self, driver, task_id):
+        driver.stop()
+
+
+if __name__ == '__main__':
+    status = Running(OneOffExecutor()).run()
+    code = 0 if status == mesos_pb2.DRIVER_STOPPED else 1
+    sys.exit(code)

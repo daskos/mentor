@@ -1,8 +1,4 @@
-FROM python:2.7
-
-USER root
-RUN wget http://downloads.mesosphere.io/master/debian/8/mesos-0.25.0-py2.7-linux-x86_64.egg -O mesos.egg && \
-    easy_install mesos.egg
+FROM lensa/mesos-python:0.26.0-py2.7-python-2.7
 
 ADD . /satyr
 WORKDIR /satyr

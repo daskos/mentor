@@ -117,49 +117,23 @@ def test_python_task_execution():
     assert task() == 7
 
 
-# def test_python_task_default_callbacks(mocker):
+# def test_python_task_callbacks(mocker):
 #     fn, args, kwargs = sum, [range(5)], {}
 
-#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
-#     mocker.spy(task, 'on_update')
-#     mocker.spy(task, 'on_success')
-#     mocker.spy(task, 'on_fail')
+#     on_update = mocker.MagicMock()
+#     on_success = mocker.MagicMock()
+#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'},
+#                       on_update=on_update, on_success=on_success)
 #     status = PythonTaskStatus(state='TASK_FINISHED', data=20)
 #     task.update(status)
-#     task.on_update.assert_called_with(status)
-#     task.on_success.assert_called_with(status)
-#     assert task.result == 20
+#     on_update.assert_called_with(task, status)
+#     on_success.assert_called_with(task, status)
 
-#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
-#     mocker.spy(task, 'on_update')
-#     mocker.spy(task, 'on_success')
-#     mocker.spy(task, 'on_fail')
+#     on_update = mocker.MagicMock()
+#     on_fail = mocker.MagicMock()
+#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'},
+#                       on_update=on_update, on_fail=on_fail)
 #     status = PythonTaskStatus(state='TASK_KILLED')
 #     task.update(status)
-#     task.on_update.assert_called_with(status)
-#     task.on_fail.assert_called_with(status)
-
-
-# def test_python_task_custom_callbacks(mocker):
-#     fn, args, kwargs = sum, [range(5)], {}
-
-#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
-#     task.on_success = mocker.Mock()
-#     task.on_fail = mocker.Mock()
-#     task.on_update = mocker.Mock()
-
-#     status = PythonTaskStatus(state='TASK_FINISHED')
-#     task.update(status)
-#     task.on_update.assert_called_with(status)
-#     task.on_fail.assert_called_with(status)
-
-#     mock = mocker.Mock()
-#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'})
-#     task.on_success = mock.on_success
-#     task.on_fail = mock.on_fail
-#     task.on_update = mock.on_update
-
-#     status = PythonTaskStatus(state='TASK_FAILED')
-#     task.update(status)
-#     mock.on_update.assert_called_with(status)
-#     mock.on_fail.assert_called_with(status)
+#     on_update.assert_called_with(task, status)
+#     on_fail.assert_called_with(task, status)

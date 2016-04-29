@@ -8,7 +8,7 @@ def test_apply_async():
     with Pool(name='test-pool') as pool:
         res1 = pool.apply_async(lambda a, b: a + b, [1, 2])
         res2 = pool.apply_async(lambda a, b: a * b, [3, 5])
-        pool.scheduler.wait()
+        pool.wait()
 
         assert isinstance(res1, AsyncResult)
         assert isinstance(res2, AsyncResult)
@@ -22,9 +22,9 @@ def test_multiple_apply_async():
         # launching multiple evaluations asynchronously *may* use more
         # processes
         results = [pool.apply_async(lambda a, b: a + b, [1, i])
-                   for i in range(4)]
+                   for i in range(5)]
         values = [res.get(timeout=5) for res in results]
-        expected = [i + 1 for i in range(4)]
+        expected = [i + 1 for i in range(5)]
         assert values == expected
 
 

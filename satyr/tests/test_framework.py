@@ -20,7 +20,7 @@ def command():
 def docker_command():
     task = TaskInfo(name='test-docker-task',
                     id=TaskID(value='test-docker-task-id'),
-                    resources=[Cpus(0.5), Mem(64)],
+                    resources=[Cpus(0.5), Mem(16)],
                     command=CommandInfo(value='echo 100'))
     task.container.type = 'DOCKER'
     task.container.docker.image = 'lensacom/satyr:latest'
@@ -32,7 +32,7 @@ def docker_python():
     task = PythonTask(id=TaskID(value='test-python-task-id'),
                       fn=sum, args=[range(5)],
                       name='test-python-task-name',
-                      resources=[Cpus(0.1), Mem(128), Disk(0)])
+                      resources=[Cpus(0.1), Mem(16), Disk(0)])
     return task
 
 
@@ -96,10 +96,26 @@ def test_docker_python(mocker, docker_python):
     assert args[1].state == 'TASK_FINISHED'
 
 
+def test_multiple_submissions(mocker, docker_python):
+    sched = QueueScheduler()
+    mocker.spy(sched, 'on_update')
+
+    with Running(sched, name='test-scheduler'):
+        results = [None] * 3
+        for i in range(3):
+            task = PythonTask(id=TaskID(value='test-python-task-{}'.format(i)),
+                              fn=sum, args=[[1, 10, i]],
+                              name='test-python-task-name',
+                              resources=[Cpus(0.1), Mem(16), Disk(0)])
+            results[i] = sched.submit(task)
+        sched.wait()  # block until all tasks finishes
+
+    assert [r.get() for r in results] == [11, 12, 13]
+
+
 def test_docker_python_result(mocker, docker_python):
     sched = QueueScheduler()
     with Running(sched, name='test-scheduler'):
-        sched.submit(docker_python)
+        result = sched.submit(docker_python)
         sched.wait()  # block until all tasks finishes
-
-    assert docker_python.result == 10
+        assert result.get() == 10

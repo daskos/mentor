@@ -13,31 +13,7 @@ from multiprocessing import Queue, TimeoutError
 import cloudpickle
 
 from ..messages import PythonTask
-from ..scheduler import QueueScheduler, Running
-
-
-class AsyncResult(object):
-
-    def __init__(self, task):
-        self.task = task
-
-    def get(self, timeout=None):
-        self.wait()
-        if self.successful():
-            return self.task.result
-        else:
-            raise ValueError('Async result indicate task failed!')
-
-    def wait(self, timeout=None):  # TODO timeout
-        while not self.ready():
-            time.sleep(0.1)
-
-    def ready(self):
-        return self.task.state in ['TASK_FINISHED', 'TASK_FAILED', 'TASK_LOST',
-                                   'TASK_KILLED']
-
-    def successful(self):
-        return self.task.state in ['TASK_FINISHED']
+from ..scheduler import AsyncResult, QueueScheduler, Running
 
 
 class Pool(Running):
@@ -56,6 +32,9 @@ class Pool(Running):
     def join(self):
         self.join()
 
+    def wait(self):
+        self.scheduler.wait()
+
     def map(self, func, iterable, chunksize=1):
         results = self.map_async(func, iterable, chunksize)
         for result in results:
@@ -71,7 +50,8 @@ class Pool(Running):
         return result.get()
 
     def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
-        task = PythonTask(fn=func, args=args, kwargs=kwds,
-                          name='multiprocessing-task', **kwargs)
-        self.scheduler.submit(task)
-        return AsyncResult(task)
+        # TODO: callback
+        task = PythonTask(name='multiprocessing-task',
+                          fn=func, args=args, kwargs=kwds, **kwargs)
+
+        return self.scheduler.submit(task)

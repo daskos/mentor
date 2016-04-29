@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import types
 from uuid import uuid4
 
 import cloudpickle
@@ -38,7 +39,7 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 resources=[Cpus(1), Mem(64)], **kwds):
+                 resources=[Cpus(0.1), Mem(16)], **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.resources = resources
         # self.executor.name = 'test-executor'
@@ -59,12 +60,3 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
 
     def status(self, state, **kwargs):
         return PythonTaskStatus(task_id=self.task_id, state=state, **kwargs)
-
-    def on_update(self, status):
-        self.state = status.state
-
-    def on_success(self, status):
-        self.result = status.data
-
-    def on_fail(self, status):
-        pass

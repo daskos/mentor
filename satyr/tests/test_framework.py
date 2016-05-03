@@ -113,6 +113,20 @@ def test_multiple_submissions(mocker, docker_python):
     assert [r.get() for r in results] == [11, 12, 13]
 
 
+def test_sequential_submit_get(mocker, docker_python):
+    sched = QueueScheduler()
+    mocker.spy(sched, 'on_update')
+
+    with Running(sched, name='test-scheduler'):
+        for i in range(3):
+            task = PythonTask(id=TaskID(value='test-python-task-{}'.format(i)),
+                              fn=sum, args=[[1, 10, i]],
+                              name='test-python-task-name',
+                              resources=[Cpus(0.1), Mem(16), Disk(0)])
+            result = sched.submit(task)
+            assert result.get(timeout=3) == 11 + i
+
+
 def test_docker_python_result(mocker, docker_python):
     sched = QueueScheduler()
     with Running(sched, name='test-scheduler'):

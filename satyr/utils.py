@@ -18,12 +18,16 @@ class TimeoutError(Exception):
 def timeout(seconds):
     def signal_handler(signum, frame):
         raise TimeoutError("Timed out!")
-    signal.signal(signal.SIGALRM, signal_handler)
-    signal.alarm(seconds)
-    try:
+
+    if seconds > 0:
+        signal.signal(signal.SIGALRM, signal_handler)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+    else:  # infinite timeout
         yield
-    finally:
-        signal.alarm(0)
 
 
 @curry

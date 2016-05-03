@@ -105,14 +105,14 @@ class QueueScheduler(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-        logging.info(task.id)
 
         result = AsyncResult()
         self.results[task.id] = result
         self.queue.append(task)
         return result
 
-    def on_offers(self, driver, offers):  # TODO: binpacking should be the default
+    def on_offers(self, driver, offers):
+        # TODO: binpacking should be the default
         def pack(task, offers):
             for offer in offers:
                 if offer >= task:
@@ -140,21 +140,15 @@ class QueueScheduler(Scheduler):
                 driver.decline(offer.id)
 
     def on_update(self, driver, status):
-        try:
-            if status.has_terminated():
-                task = self.running.pop(status.task_id)
-                result = self.results.pop(status.task_id)
-                result.value = status.data
-                result.success = status.has_succeeded()
-            else:
-                task = self.running[status.task_id]
+        if status.has_terminated():
+            task = self.running.pop(status.task_id)
+            result = self.results.pop(status.task_id)
+            result.value = status.data
+            result.success = status.has_succeeded()
+        else:
+            task = self.running[status.task_id]
 
-            task.update(status)
-        except:
-            raise
-
-        if len(self.queue) == 0 and len(self.running) == 0:
-            driver.stop()
+        task.update(status)
 
 
 if __name__ == '__main__':

@@ -19,6 +19,22 @@ def test_apply_async():
         assert res2.get(timeout=10) == 15
 
 
+def test_apply_async_timeout():
+    with pytest.raises(TimeoutError):
+        with Pool(name='test-pool') as pool:
+            res = pool.apply_async(time.sleep, (10,))
+            res.get(timeout=1)
+
+
+def test_apply():
+    with Pool(name='test-pool') as pool:
+        result = pool.apply(lambda a, b: a + b, [1, 3])
+        assert result == 4
+
+        result = pool.apply(lambda a, b: a + b, ['a', 'b'])
+        assert result == 'ab'
+
+
 def test_multiple_apply_async():
     with Pool(name='test-pool') as pool:
         results = [pool.apply_async(lambda a, b: a + b, [1, i])
@@ -41,8 +57,20 @@ def test_queue_apply_async(zk):
     assert sorted(results) == range(4)
 
 
-def test_apply_async_timeout():
-    with pytest.raises(TimeoutError):
-        with Pool(name='test-pool') as pool:
-            res = pool.apply_async(time.sleep, (10,))
-            res.get(timeout=1)
+def test_map_async():
+    with Pool(name='test-pool') as pool:
+        results = pool.map_async(
+            lambda tpl: tpl[0] + tpl[1], zip(range(5), range(5)))
+        assert all([isinstance(res, AsyncResult) for res in results])
+
+        values = [res.get(timeout=10) for res in results]
+        expected = [i + i for i in range(5)]
+        assert values == expected
+
+
+def test_map():
+    with Pool(name='test-pool') as pool:
+        results = pool.map(
+            lambda tpl: tpl[0] + tpl[1], zip(range(5), range(5)))
+        expected = [i + i for i in range(5)]
+        assert results == expected

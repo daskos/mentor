@@ -1,19 +1,6 @@
-from collections import deque
-
+from kazoo.client import KazooClient
 from kazoo.recipe.queue import LockingQueue as KazooLockingQueue
 from kazoo.recipe.queue import Queue as KazooQueue
-
-
-class Queue(deque):
-
-    def put(self, value):
-        self.append(value)
-
-    def get(self):
-        return self.popleft()
-
-    def empty(self):
-        return len(self) == 0
 
 
 class SerializeMixin(object):
@@ -36,8 +23,8 @@ class SerializeMixin(object):
         self.client = client
 
 
-# class Queue(KazooQueue, SerializeMixin):
-#    pass
+class Queue(KazooQueue, SerializeMixin):
+    pass
 
 
 class LockingQueue(KazooLockingQueue, SerializeMixin):

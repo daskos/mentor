@@ -1,19 +1,14 @@
-# coding: utf-8
-
 from __future__ import absolute_import, division, print_function
 
-import copy
-import logging
-import time
-import uuid
-from collections import deque
 from functools import partial
-from multiprocessing import Queue, TimeoutError
-
-import cloudpickle
 
 from ..messages import PythonTask
+from ..queue import Queue
 from ..scheduler import AsyncResult, QueueScheduler, Running
+
+__all__ = ('Pool',
+           'Queue',
+           'AsyncResult')
 
 
 class Pool(Running):

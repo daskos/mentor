@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
 from functools import partial
 from uuid import uuid4
 
@@ -46,7 +45,8 @@ class Map(dict):
     # def __delattr__(self, k):
     #    del self[k]
 
-    def __missing__(self, k):  # TODO: consider not using this, silents errors
+    def __missing__(self, k):
+        # TODO: consider not using this, silents errors
         self[k] = Map()
         return self[k]
 

@@ -85,7 +85,6 @@ def test_hash():
 
 
 def test_dict_hashing():
-    d1 = Map(a=Map(b=3), c=5)
     d2 = Map(a=Map(b=3), c=5)
     d3 = Map(a=Map(b=6), c=5)
 
@@ -134,7 +133,7 @@ def test_encode_resources():
     assert pb.type == mesos_pb2.Value.SCALAR
 
 
-def test_encode_task_info():
+def test_encode_task_info_resources():
     task = TaskInfo(name='test-task',
                     id=TaskID(value='test-task-id'),
                     resources=[Cpus(0.1), Mem(16)],

@@ -1,9 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
-import types
-from uuid import uuid4
-
 import cloudpickle
 from mesos.interface import mesos_pb2
 
@@ -39,7 +35,7 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 resources=[Cpus(0.1), Mem(16)], **kwds):
+                 resources=[Cpus(0.1), Mem(16), Disk(0)], **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.resources = resources
         # self.executor.name = 'test-executor'

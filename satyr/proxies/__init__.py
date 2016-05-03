@@ -7,6 +7,6 @@ from .messages import MessageProxy
 
 __all__ = ('MessageProxy',
            'SchedulerProxy',
-           'ExecutorProxy'
+           'ExecutorProxy',
            'SchedulerDriverProxy',
            'ExecutorDriverProxy')

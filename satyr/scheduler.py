@@ -11,9 +11,9 @@ from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
 from .interface import Scheduler
-from .messages import PythonTaskStatus
 from .proxies import SchedulerProxy
 from .proxies.messages import FrameworkInfo, TaskInfo, encode
+from .utils import timeout
 
 
 class PackError(Exception):
@@ -70,16 +70,17 @@ class AsyncResult(object):
         self.success = None
         self.value = None
 
-    def get(self, timeout=None):
-        self.wait()
+    def get(self, timeout=60):
+        self.wait(timeout)
         if self.successful():
             return self.value
         else:
             raise ValueError('Async result indicate task failed!')
 
-    def wait(self, timeout=None):  # TODO timeout
-        while not self.ready():
-            time.sleep(0.1)
+    def wait(self, seconds=60):
+        with timeout(seconds):
+            while not self.ready():
+                time.sleep(0.1)
 
     def ready(self):
         return self.success is not None
@@ -104,12 +105,11 @@ class QueueScheduler(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
+        logging.info(task.id)
 
         result = AsyncResult()
-        logging.info(task.id)
         self.results[task.id] = result
         self.queue.append(task)
-
         return result
 
     def on_offers(self, driver, offers):  # TODO: binpacking should be the default
@@ -125,10 +125,10 @@ class QueueScheduler(Scheduler):
             # right now it only tries to schedule the first task in the queue
             task = self.queue.pop()
             offer, task = pack(task, offers)
-        except PackError as e:
+        except PackError:
             # TODO: should reschedule if any error occurs at launch too
             self.tasks.append(task)
-        except IndexError as e:
+        except IndexError:
             # TODO: log empty queue
             pass
         else:

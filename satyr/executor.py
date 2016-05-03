@@ -5,13 +5,11 @@ import logging
 import signal
 import sys
 import threading
-import time
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosExecutorDriver
 
 from .interface import Executor
-from .messages import PythonTask  # important to register classes
 from .proxies import ExecutorProxy
 
 
@@ -22,7 +20,6 @@ class Running(object):
         self.driver = MesosExecutorDriver(executor)
 
         def shutdown(signal, frame):
-            #logging.info("Shutdown signal")
             self.driver.stop()
 
         signal.signal(signal.SIGINT, shutdown)

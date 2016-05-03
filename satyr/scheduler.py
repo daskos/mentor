@@ -11,9 +11,9 @@ from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
 from .interface import Scheduler
-from .messages import PythonTaskStatus
 from .proxies import SchedulerProxy
 from .proxies.messages import FrameworkInfo, TaskInfo, encode
+from .utils import timeout
 
 
 class PackError(Exception):
@@ -64,11 +64,37 @@ class Running(object):
         self.stop()
 
 
+class AsyncResult(object):
+
+    def __init__(self):
+        self.success = None
+        self.value = None
+
+    def get(self, timeout=60):
+        self.wait(timeout)
+        if self.successful():
+            return self.value
+        else:
+            raise ValueError('Async result indicate task failed!')
+
+    def wait(self, seconds=60):
+        with timeout(seconds):
+            while not self.ready():
+                time.sleep(0.1)
+
+    def ready(self):
+        return self.success is not None
+
+    def successful(self):
+        return self.success is True
+
+
 class QueueScheduler(Scheduler):
 
     def __init__(self, *args, **kwargs):
         self.queue = deque()  # holding unscheduled tasks
         self.running = {}  # holding task_id => task pairs
+        self.results = {}  # holding task_id => async_result pairs
 
     def is_idle(self):
         return not len(self.queue) and not len(self.running)
@@ -79,7 +105,12 @@ class QueueScheduler(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
+        logging.info(task.id)
+
+        result = AsyncResult()
+        self.results[task.id] = result
         self.queue.append(task)
+        return result
 
     def on_offers(self, driver, offers):  # TODO: binpacking should be the default
         def pack(task, offers):
@@ -91,13 +122,13 @@ class QueueScheduler(Scheduler):
 
         try:
             # should consider the whole queue as a list with a bin packing
-            # solver
+            # right now it only tries to schedule the first task in the queue
             task = self.queue.pop()
             offer, task = pack(task, offers)
-        except PackError as e:
+        except PackError:
             # TODO: should reschedule if any error occurs at launch too
             self.tasks.append(task)
-        except IndexError as e:
+        except IndexError:
             # TODO: log empty queue
             pass
         else:
@@ -110,8 +141,11 @@ class QueueScheduler(Scheduler):
 
     def on_update(self, driver, status):
         try:
-            if status.is_terminated():
+            if status.has_terminated():
                 task = self.running.pop(status.task_id)
+                result = self.results.pop(status.task_id)
+                result.value = status.data
+                result.success = status.has_succeeded()
             else:
                 task = self.running[status.task_id]
 

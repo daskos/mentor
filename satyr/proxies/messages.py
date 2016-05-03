@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
 from functools import partial
 from uuid import uuid4
 
@@ -28,21 +27,26 @@ class Map(dict):
             return v
 
     def __setitem__(self, k, v):
-        # if not empty?
         # accidental __missing__ call will create a new node
         super(Map, self).__setitem__(k, self.cast(v))
 
     def __setattr__(self, k, v):
-        prop = getattr(self.__class__, k, None)  # support properties
-        if isinstance(prop, property):
+        prop = getattr(self.__class__, k, None)
+        if isinstance(prop, property):  # property binding
             prop.fset(self, v)
+        elif callable(v):  # method binding
+            self.__dict__[k] = v
         else:
             self[k] = v
 
     def __getattr__(self, k):
         return self[k]
 
-    def __missing__(self, k):  # TODO: consider not using this, silents errors
+    # def __delattr__(self, k):
+    #    del self[k]
+
+    def __missing__(self, k):
+        # TODO: consider not using this, silents errors
         self[k] = Map()
         return self[k]
 
@@ -183,14 +187,14 @@ class Filters(MessageProxy):
 class TaskStatus(MessageProxy):
     proto = mesos_pb2.TaskStatus
 
-    def is_successful(self):
+    def has_succeeded(self):
         return self.state == 'TASK_FINISHED'
 
-    def is_failed(self):
+    def has_failed(self):
         return self.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED']
 
-    def is_terminated(self):
-        return self.is_successful() or self.is_failed()
+    def has_terminated(self):
+        return self.has_succeeded() or self.has_failed()
 
 
 class Offer(ResourcesMixin, MessageProxy):  # important order!
@@ -200,9 +204,9 @@ class Offer(ResourcesMixin, MessageProxy):  # important order!
 class TaskInfo(ResourcesMixin, MessageProxy):
     proto = mesos_pb2.TaskInfo
 
-    def __init__(self, id=TaskID(value=str(uuid4())), **kwargs):
+    def __init__(self, id=None, **kwargs):
         super(TaskInfo, self).__init__(**kwargs)
-        self.id = id
+        self.id = id or TaskID(value=str(uuid4()))
 
     @property
     def id(self):  # more consistent naming
@@ -216,12 +220,11 @@ class TaskInfo(ResourcesMixin, MessageProxy):
         return TaskStatus(task_id=self.task_id, state=state, **kwargs)
 
     def update(self, status):
-        logging.info('task.status called with {}'.format(status.state))
         self.on_update(status)
 
-        if status.is_successful():
+        if status.has_succeeded():
             self.on_success(status)
-        elif status.is_failed():
+        elif status.has_failed():
             self.on_fail(status)
 
     def on_update(self, status):

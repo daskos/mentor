@@ -1,7 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from functools import partial
-
 from ..messages import PythonTask
 from ..queue import Queue
 from ..scheduler import AsyncResult, QueueScheduler, Running
@@ -32,17 +30,16 @@ class Pool(Running):
 
     def map(self, func, iterable, chunksize=1):
         results = self.map_async(func, iterable, chunksize)
-        for result in results:
-            result.wait()
-        return [result.get() for result in results]
+        return [result.get(timeout=-1) for result in results]
 
     def map_async(self, func, iterable, chunksize=1, callback=None):
-        return map(partial(self.apply_async, func=func), iterable)  # TODO
+        return [self.apply_async(func, (item,)) for item in iterable]
 
     def apply(self, func, args=[], kwds={}):
+        import logging
+        logging.info('apply called')
         result = self.apply_async(func=func, args=args, kwds=kwds)
-        result.wait()
-        return result.get()
+        return result.get(timeout=-1)
 
     def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
         # TODO: callback

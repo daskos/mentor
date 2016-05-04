@@ -17,7 +17,7 @@ setup(name='satyr',
       packages=['satyr'],
       long_description=(open('README.rst').read() if exists('README.rst')
                         else ''),
-      install_requires=['cloudpickle', 'colorlog', 'kazoo', 'toolz'],
+      install_requires=['cloudpickle', 'kazoo', 'toolz'],
       extras_require={'mesos': ['mesos.native']},
       setup_requires=['pytest-runner'],
       tests_require=['pytest-mock', 'pytest'],

@@ -73,24 +73,74 @@ class MessageProxy(Map):
     proto = Message
 
 
-class ResourcesMixin(object):
+class Resource(MessageProxy):
+    proto = mesos_pb2.Resource
 
-    def get_scalar(self, cls):
-        for res in self.resources:
-            if isinstance(res, cls):
-                return res.scalar.value
+
+# TODO: RangeResource e.g. ports
+class ScalarResource(Resource):
+    # supports comparison and basic arithmetics with scalars
+    proto = mesos_pb2.Resource(type=mesos_pb2.Value.SCALAR)
+
+    def __init__(self, value=None, **kwargs):
+        super(Resource, self).__init__(**kwargs)
+        if value is not None:
+            self.scalar.value = value
+
+    def __cmp__(self, other):
+        if isinstance(other, ScalarResource):
+            other = other.scalar.value
+        if self.scalar.value < other:
+            return -1
+        elif self.scalar.value > other:
+            return 1
+        else:
+            return 0
+
+    def __add__(self, other):
+        if isinstance(other, ScalarResource):
+            other = other.scalar.value
+        value = self.scalar.value + other
+        return self.__class__(value=value)
+
+    def __sub__(self, other):
+        if isinstance(other, ScalarResource):
+            other = other.scalar.value
+        value = self.scalar.value - other
+        return self.__class__(value=value)
+
+    def __iadd__(self, other):
+        if isinstance(other, ScalarResource):
+            other = other.scalar.value
+        self.scalar.value += other
+        return self
+
+    def __isub__(self, other):
+        if isinstance(other, ScalarResource):
+            other = other.scalar.value
+        self.scalar.value -= other
+        return self
+
+
+class ResourcesMixin(object):
 
     @property
     def cpus(self):
-        return self.get_scalar(Cpus)
+        for res in self.resources:
+            if isinstance(res, Cpus):
+                return res
 
     @property
     def mem(self):
-        return self.get_scalar(Mem)
+        for res in self.resources:
+            if isinstance(res, Mem):
+                return res
 
     @property
     def disk(self):
-        return self.get_scalar(Disk)
+        for res in self.resources:
+            if isinstance(res, Disk):
+                return res
 
     # @property
     # def ports(self):
@@ -109,38 +159,44 @@ class ResourcesMixin(object):
         else:
             return 0
 
-    # def __add__(self, other):
-    #     ports = list(set(self.ports) | set(other.ports))
-    #     disk = self.disk + other.disk
-    #     cpus = self.cpus + other.cpus
-    #    mem = self.mem + other.mem
+    def __add__(self, other):
+        # ports = list(set(self.ports) | set(other.ports))
+        disk = self.disk + other.disk
+        cpus = self.cpus + other.cpus
+        mem = self.mem + other.mem
+        mixin = self.__class__()
+        mixin.resources = [cpus, disk, mem]
+        return mixin
 
-    # def __sub__(self, other):
-    #     ports = list(set(self.ports) - set(other.ports))
-    #     disk = self.disk - other.disk
-    #     cpus = self.cpus - other.cpus
-    #     mem = self.mem - other.mem
-    #     return Resources(cpus=cpus, mem=mem, disk=disk, ports=ports)
+    def __sub__(self, other):
+        # ports = list(set(self.ports) | set(other.ports))
+        disk = self.disk - other.disk
+        cpus = self.cpus - other.cpus
+        mem = self.mem - other.mem
+        mixin = self.__class__()
+        mixin.resources = [cpus, disk, mem]
+        return mixin
+
+    def __iadd__(self, other):
+        added = self + other
+        self.resources = added.resources
+        return self
+
+    def __isub__(self, other):
+        subbed = self - other
+        self.resources = subbed.resources
+        return self
 
 
-class Resource(MessageProxy):
-    proto = mesos_pb2.Resource
-
-    def __init__(self, value=None, **kwargs):
-        super(Resource, self).__init__(**kwargs)
-        if value is not None:
-            self.scalar.value = value
-
-
-class Cpus(Resource):
+class Cpus(ScalarResource):
     proto = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
 
 
-class Mem(Resource):
+class Mem(ScalarResource):
     proto = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
 
 
-class Disk(Resource):
+class Disk(ScalarResource):
     proto = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
 
 

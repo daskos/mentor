@@ -36,8 +36,6 @@ class Pool(Running):
         return [self.apply_async(func, (item,)) for item in iterable]
 
     def apply(self, func, args=[], kwds={}):
-        import logging
-        logging.info('apply called')
         result = self.apply_async(func=func, args=args, kwds=kwds)
         return result.get(timeout=-1)
 

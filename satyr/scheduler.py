@@ -10,19 +10,15 @@ from collections import deque
 from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
+from .binpack import bfd
 from .interface import Scheduler
 from .proxies import SchedulerProxy
 from .proxies.messages import FrameworkInfo, TaskInfo, encode
 from .utils import timeout
 
 
-class PackError(Exception):
-    pass
-
-
 class Running(object):
 
-    # TODO: envargs
     def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
                  implicit_acknowledge=1, *args, **kwargs):
         scheduler = SchedulerProxy(scheduler)
@@ -105,39 +101,33 @@ class QueueScheduler(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-
         result = AsyncResult()
         self.results[task.id] = result
         self.queue.append(task)
         return result
 
     def on_offers(self, driver, offers):
-        # TODO: binpacking should be the default
-        def pack(task, offers):
-            for offer in offers:
-                if offer >= task:
-                    task.slave_id = offer.slave_id
-                    return (offer, task)
-            raise PackError('Couldn\'t pack')
+        bins, skip = bfd(self.queue, offers)
 
-        try:
-            # should consider the whole queue as a list with a bin packing
-            # right now it only tries to schedule the first task in the queue
-            task = self.queue.pop()
-            offer, task = pack(task, offers)
-        except PackError:
-            # TODO: should reschedule if any error occurs at launch too
-            self.tasks.append(task)
-        except IndexError:
-            # TODO: log empty queue
-            pass
-        else:
-            offers.pop(offers.index(offer))
-            driver.launch(offer.id, [task])
-            self.running[task.id] = task
-        finally:
-            for offer in offers:
-                driver.decline(offer.id)
+        # filter out empty bins
+        # TODO: verify driver.launch declines in case of empty task list
+        bins = [(offer, tasks) for offer, tasks in bins if len(tasks)]
+
+        for offer, tasks in bins:
+            try:
+                for task in tasks:
+                    task.slave_id = offer.slave_id
+                driver.launch(offer.id, tasks)
+            except Exception:  # error occured, log
+                logging.error('Exception occured during task launch!')
+            else:  # successfully launched tasks
+                offers.remove(offer)  # the remaining ones will be declined
+                for task in tasks:
+                    self.queue.remove(task)
+                    self.running[task.id] = task
+
+        for offer in offers:
+            driver.decline(offer.id)
 
     def on_update(self, driver, status):
         if status.has_terminated():

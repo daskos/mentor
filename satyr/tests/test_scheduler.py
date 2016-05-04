@@ -37,14 +37,14 @@ def test_launch_decline(mocker, python_task, offers):
 
     args, kwargs = calls[0]
     assert isinstance(args[0], OfferID)
-    assert args[0].value == 'first-offer'
+    assert args[0].value == 'second-offer'  # bfd binpacking prefers second
     assert isinstance(args[1][0], PythonTask)
     assert args[1][0].task_id.value == 'test-task-id'
 
     calls = driver.decline.call_args_list
     args, kwargs = calls[0]
     assert isinstance(args[0], OfferID)
-    assert args[0].value == 'second-offer'
+    assert args[0].value == 'first-offer'
 
 
 def test_task_callbacks(mocker, python_task, offers):

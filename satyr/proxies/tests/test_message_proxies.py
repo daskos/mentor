@@ -185,6 +185,17 @@ def test_scalar_resource_addition():
     assert s == 13.5
 
 
+def test_scalar_resource_sum():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+    r3 = ScalarResource(value=3)
+
+    s = sum([r1, r2, r3])
+    assert isinstance(s, ScalarResource)
+    assert s == ScalarResource(16.5)
+    assert s == 16.5
+
+
 def test_scalar_resource_subtraction():
     r1 = ScalarResource(value=11.5)
     r2 = ScalarResource(value=2)
@@ -262,6 +273,21 @@ def test_resources_mixin_addition():
     assert s.mem == 256
     assert s.disk == Disk(0)
     assert s.disk == 0
+
+
+def test_resources_mixin_sum():
+    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+    o2 = Offer(resources=[Cpus(2), Mem(128), Disk(100)])
+    o3 = Offer(resources=[Cpus(0.5), Mem(256), Disk(200)])
+
+    s = sum([o1, o2, o3])
+    assert isinstance(s, ResourcesMixin)
+    assert s.cpus == Cpus(3.5)
+    assert s.cpus == 3.5
+    assert s.mem == Mem(512)
+    assert s.mem == 512
+    assert s.disk == Disk(300)
+    assert s.disk == 300
 
 
 def test_resources_mixin_subtraction():

@@ -97,6 +97,9 @@ class ScalarResource(Resource):
         else:
             return 0
 
+    def __radd__(self, other):  # to support sum()
+        return self + other
+
     def __add__(self, other):
         if isinstance(other, ScalarResource):
             other = other.scalar.value
@@ -129,18 +132,21 @@ class ResourcesMixin(object):
         for res in self.resources:
             if isinstance(res, Cpus):
                 return res
+        return Cpus(0.0)
 
     @property
     def mem(self):
         for res in self.resources:
             if isinstance(res, Mem):
                 return res
+        return Mem(0.0)
 
     @property
     def disk(self):
         for res in self.resources:
             if isinstance(res, Disk):
                 return res
+        return Disk(0.0)
 
     # @property
     # def ports(self):
@@ -149,6 +155,8 @@ class ResourcesMixin(object):
     #             return [(rng.begin, rng.end) for rng in res.ranges.range]
 
     def __cmp__(self, other):
+        if other == 0:
+            other = self.__class__()
         this = (self.cpus, self.mem, self.disk)
         other = (other.cpus, other.mem, other.disk)
 
@@ -159,30 +167,43 @@ class ResourcesMixin(object):
         else:
             return 0
 
+    def __radd__(self, other):  # to support sum()
+        if other == 0:
+            other = self.__class__()
+        return self + other
+
     def __add__(self, other):
+        if other == 0:
+            other = self.__class__()
         # ports = list(set(self.ports) | set(other.ports))
-        disk = self.disk + other.disk
         cpus = self.cpus + other.cpus
         mem = self.mem + other.mem
+        disk = self.disk + other.disk
         mixin = self.__class__()
         mixin.resources = [cpus, disk, mem]
         return mixin
 
     def __sub__(self, other):
+        if other == 0:
+            other = self.__class__()
         # ports = list(set(self.ports) | set(other.ports))
-        disk = self.disk - other.disk
         cpus = self.cpus - other.cpus
         mem = self.mem - other.mem
+        disk = self.disk - other.disk
         mixin = self.__class__()
         mixin.resources = [cpus, disk, mem]
         return mixin
 
     def __iadd__(self, other):
+        if other == 0:
+            other = self.__class__()
         added = self + other
         self.resources = added.resources
         return self
 
     def __isub__(self, other):
+        if other == 0:
+            other = self.__class__()
         subbed = self - other
         self.resources = subbed.resources
         return self

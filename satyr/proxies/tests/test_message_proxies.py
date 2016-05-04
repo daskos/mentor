@@ -2,7 +2,8 @@ import pytest
 from mesos.interface import mesos_pb2
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
                                     FrameworkInfo, Map, Mem, MessageProxy,
-                                    Offer, RegisterProxies, TaskID, TaskInfo,
+                                    Offer, RegisterProxies, ResourcesMixin,
+                                    ScalarResource, TaskID, TaskInfo,
                                     TaskStatus, decode, encode)
 
 
@@ -158,7 +159,63 @@ def test_decode_framework_info():
     assert isinstance(wrapped.id, FrameworkID)
 
 
-def test_resources_mixin():
+def test_scalar_resource_comparison():
+    r1 = ScalarResource(value=11.5)
+
+    assert r1 == ScalarResource(value=11.5)
+    assert r1 <= ScalarResource(value=11.5)
+    assert r1 >= ScalarResource(value=11.5)
+    assert r1 < ScalarResource(value=12)
+    assert r1 > ScalarResource(value=11)
+
+    assert r1 == 11.5
+    assert r1 <= 11.5
+    assert r1 >= 11.5
+    assert r1 < 12
+    assert r1 > 11
+
+
+def test_scalar_resource_addition():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    s = r1 + r2
+    assert isinstance(s, ScalarResource)
+    assert s == ScalarResource(13.5)
+    assert s == 13.5
+
+
+def test_scalar_resource_subtraction():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    s = r1 - r2
+    assert isinstance(s, ScalarResource)
+    assert s == ScalarResource(9.5)
+    assert s == 9.5
+
+
+def test_scalar_resource_inplace_addition():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    r1 += r2
+    assert isinstance(r1, ScalarResource)
+    assert r1 == ScalarResource(13.5)
+    assert r1 == 13.5
+
+
+def test_scalar_resource_inplace_subtraction():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    r1 -= r2
+    assert isinstance(r1, ScalarResource)
+    assert r1 == ScalarResource(9.5)
+    assert r1 == 9.5
+
+
+def test_resources_mixin_comparison():
     o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
     o2 = Offer(resources=[Cpus(2), Mem(256), Disk(1024)])
 
@@ -191,6 +248,62 @@ def test_resources_mixin():
     assert o2 >= t1
     assert o2 >= t2
     assert t2 >= o1
+
+
+def test_resources_mixin_addition():
+    o = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+
+    s = o + t
+    assert isinstance(s, ResourcesMixin)
+    assert s.cpus == Cpus(1.5)
+    assert s.cpus == 1.5
+    assert s.mem == Mem(256)
+    assert s.mem == 256
+    assert s.disk == Disk(0)
+    assert s.disk == 0
+
+
+def test_resources_mixin_subtraction():
+    o = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+
+    s = o - t
+    assert isinstance(s, ResourcesMixin)
+    assert s.cpus == Cpus(0.5)
+    assert s.cpus == 0.5
+    assert s.mem == Mem(0)
+    assert s.mem == 0
+    assert s.disk == Disk(0)
+    assert s.disk == 0
+
+
+def test_resources_mixin_inplace_addition():
+    o = Offer(resources=[Cpus(1), Mem(128), Disk(64)])
+    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+
+    o += t
+    assert isinstance(o, Offer)
+    assert o.cpus == Cpus(1.5)
+    assert o.cpus == 1.5
+    assert o.mem == Mem(256)
+    assert o.mem == 256
+    assert o.disk == Disk(64)
+    assert o.disk == 64
+
+
+def test_resources_mixin_inplace_subtraction():
+    o = Offer(resources=[Cpus(1), Mem(128), Disk(64)])
+    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+
+    o -= t
+    assert isinstance(o, Offer)
+    assert o.cpus == Cpus(0.5)
+    assert o.cpus == 0.5
+    assert o.mem == Mem(0)
+    assert o.mem == 0
+    assert o.disk == Disk(64)
+    assert o.disk == 64
 
 
 def test_encode_task_info():

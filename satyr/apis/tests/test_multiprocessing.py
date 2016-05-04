@@ -22,7 +22,7 @@ def test_apply_async():
 def test_apply_async_timeout():
     with pytest.raises(TimeoutError):
         with Pool(name='test-pool') as pool:
-            res = pool.apply_async(time.sleep, (10,))
+            res = pool.apply_async(time.sleep, (3,))
             res.get(timeout=1)
 
 
@@ -33,6 +33,7 @@ def test_apply():
 
         result = pool.apply(lambda a, b: a + b, ['a', 'b'])
         assert result == 'ab'
+        pool.wait()
 
 
 def test_multiple_apply_async():
@@ -61,17 +62,20 @@ def test_queue_apply_async(zk):
 def test_map_async():
     with Pool(name='test-pool') as pool:
         results = pool.map_async(
-            lambda tpl: tpl[0] + tpl[1], zip(range(5), range(5)))
+            lambda tpl: tpl[0] + tpl[1], zip(range(4), range(4)))
         assert all([isinstance(res, AsyncResult) for res in results])
 
         values = [res.get(timeout=10) for res in results]
-        expected = [i + i for i in range(5)]
-        assert values == expected
+        pool.wait()
+
+    assert values == [i + i for i in range(4)]
 
 
 def test_map():
     with Pool(name='test-pool') as pool:
         results = pool.map(
-            lambda tpl: tpl[0] + tpl[1], zip(range(5), range(5)))
-        expected = [i + i for i in range(5)]
-        assert results == expected
+            lambda tpl: tpl[0] + tpl[1], zip(range(3), range(3)))
+        pool.wait()  # not mandatory
+
+    expected = [i + i for i in range(3)]
+    assert results == expected

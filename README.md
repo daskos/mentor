@@ -80,6 +80,26 @@ with Running(scheduler, name='satyr-custom-scheduler'):
     print(res.get())
 ```
 
+Also this way you can easily implement your own resource offer handling logic by overriding the `on_offers(self, driver, offers)` method in which we give you a helping hand with comparable Offers and TaskInfos. (Comparison is based on provided and required resources.)
+
+```python
+from satyr.interface import Scheduler
+from satyr.proxies.messages import Offer, TaskInfo
+
+
+class CustomScheduler(Scheduler):
+    ...
+    def on_offers(self, driver, offers):
+        ...
+        # We're pretty sure you'll not be doing anything like this.
+        offer = Offer(resources=[Cpus(2), Mem(512)])
+        task = TaskInfo(resources=[Cpus(0.5), Mem(128)])
+        offer > task  # True
+        ...
+```
+
+Currently we only have some basic resource handling but we're up to solve this issue with some nice Bin-Packing heuristics (First-Fit(-Decreasing), Max-Rest, Best-Fit(-Decreasing)).
+
 ### Built in task types
 
 #### Command
@@ -88,6 +108,7 @@ The most basic task executes a simple command, Mesos will run CommandInfo's valu
 
 ```python
 from satyr.proxies.messages import TaskInfo, CommandInfo
+
 
 task = TaskInfo(name='command-task', command=CommandInfo(value='echo 100'))
 task.container.type = 'DOCKER'
@@ -101,8 +122,10 @@ As it's name says a [PythonTask](/satyr/messages.py) is capable of running some 
 ```python
 from satyr.messages import PythonTask
 
+
 # You can pass a function or a lambda in place of sum for fn.
-task = PythonTask(name='python-task', fn=sum, args=[range(5)])
+task = PythonTask(name='python-task',
+                  fn=sum, args=[range(5)])
 ```
 
 ### Custom task

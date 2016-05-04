@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
+
 import cloudpickle
 from mesos.interface import mesos_pb2
 
@@ -56,3 +58,10 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
 
     def status(self, state, **kwargs):
         return PythonTaskStatus(task_id=self.task_id, state=state, **kwargs)
+
+    def on_success(self, status):
+        logging.info('Task {} has been succeded'.format(self.id.value))
+
+    def on_fail(self, status):
+        logging.info('Task {} has been failed due to {}'.format(self.id.value,
+                                                                status.message))

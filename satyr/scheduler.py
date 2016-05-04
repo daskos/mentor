@@ -107,6 +107,16 @@ class QueueScheduler(Scheduler):
         return result
 
     def on_offers(self, driver, offers):
+        def commit(tasks, queue, running):
+            for task in tasks:
+                queue.remove(task)
+                running[task.id] = task
+
+        def rollback(tasks, queue, running):
+            for task in tasks:
+                queue.append(task)
+                del running[task.id]
+
         bins, skip = bfd(self.queue, offers)
 
         # filter out empty bins
@@ -114,17 +124,16 @@ class QueueScheduler(Scheduler):
         bins = [(offer, tasks) for offer, tasks in bins if len(tasks)]
 
         for offer, tasks in bins:
+            for task in tasks:
+                task.slave_id = offer.slave_id
             try:
-                for task in tasks:
-                    task.slave_id = offer.slave_id
+                commit(tasks, self.queue, self.running)
                 driver.launch(offer.id, tasks)
             except Exception:  # error occured, log
+                rollback(tasks, self.queue, self.running)
                 logging.error('Exception occured during task launch!')
             else:  # successfully launched tasks
                 offers.remove(offer)  # the remaining ones will be declined
-                for task in tasks:
-                    self.queue.remove(task)
-                    self.running[task.id] = task
 
         for offer in offers:
             driver.decline(offer.id)

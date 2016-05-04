@@ -82,10 +82,50 @@ with Running(scheduler, name='satyr-custom-scheduler'):
 
 ### Built in task types
 
-**TODO**
+#### Command
 
-* command
-* python
+The most basic task executes a simple command, Mesos will run CommandInfo's value with `/bin/sh -c`. Also, if you want to run your task in a Docker container you can provide some additional information for the task.
+
+```python
+from satyr.proxies.messages import TaskInfo, CommandInfo
+
+task = TaskInfo(name='command-task', command=CommandInfo(value='echo 100'))
+task.container.type = 'DOCKER'
+task.container.docker.image = 'lensacom/satyr:latest'
+```
+
+#### Python
+
+As it's name says a [PythonTask](/satyr/messages.py) is capable of running some python code on your cluster. It sends pickled methods to the executor which then will run it. (In fact it wraps the base TaskInfo.) Note that python tasks will run in Docker containers by default.
+
+```python
+from satyr.messages import PythonTask
+
+# You can pass a function or a lambda in place of sum for fn.
+task = PythonTask(name='python-task', fn=sum, args=[range(5)])
+```
+
+### Custom task
+
+Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py) or any existing tasks. If you're walking down the former path you'll most likely have to deal with protobuf in your code; worry not, we have some magic wrappers for you to provide easely extensible messages. (**TODO** Clear this up.)
+
+```python
+from __future__ import print_function
+from satyr.proxies.messages import TaskInfo
+from mesos.interface import mesos_pb2
+
+
+class CustomTask(TaskInfo):
+    proto = mesos_pb2.TaskInfo(
+        labels=mesos_pb2.Labels(
+            labels=[mesos_pb2.Label(key='custom')]))
+
+    def on_update(self, status):
+         logging.info('Custom task has received a status update')
+
+    def custom_method(self):
+         print("Arbitrary stuff")
+```
 
 ### Custom executor
 
@@ -93,11 +133,7 @@ with Running(scheduler, name='satyr-custom-scheduler'):
 
 ## Configuration
 
-**TODO**
-
-Most of the configuration can be set in environment variables like:
+There's only a handful of configurations need to be set outside of code to get Satyr running. Each of them can be set as an environment variable.
 
 * MESOS_MASTER=zk://127.0.0.1:2181/mesos
 * ZOOKEEPER_HOST=127.0.0.1:2181
-
-**TODO**

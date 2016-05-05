@@ -39,20 +39,20 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 resources=[Cpus(0.1), Mem(64), Disk(0)], **kwds):
+                 resources=[Cpus(0.2), Mem(128), Disk(0)], **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.resources = resources
 
-        docker = DockerInfo(image='lensacom/satyr:latest',
+        docker = DockerInfo(image='lensa/satyr:latest',
                             force_pull_image=False,
                             network='HOST')
 
         self.executor = ExecutorInfo(
-            # name='python-task-executor',
             executor_id=ExecutorID(value=self.id.value),
             command=CommandInfo(value='python -m satyr.executor', shell=True),
-            container=ContainerInfo(type='DOCKER', docker=docker),
-            resources=resources)
+            container=ContainerInfo(type='DOCKER', docker=docker))
+        # resources=resources)
+        self.resources = resources
 
         self.data = (fn, args, kwargs)  # TODO: assert fn is callable
 

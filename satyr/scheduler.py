@@ -5,7 +5,7 @@ import logging
 import os
 import signal
 import time
-from collections import Counter, deque
+from collections import Counter
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver

@@ -39,11 +39,11 @@ def test_apply():
 def test_multiple_apply_async():
     with Pool(name='test-pool') as pool:
         results = [pool.apply_async(lambda a, b: a + b, [1, i])
-                   for i in range(10)]
+                   for i in range(5)]
         values = [res.get(timeout=20) for res in results]
         # pool.wait()
 
-    assert values == [i + 1 for i in range(10)]
+    assert values == [i + 1 for i in range(5)]
 
 
 def test_queue_apply_async(zk):
@@ -52,11 +52,11 @@ def test_queue_apply_async(zk):
 
     queue = Queue(zk, '/satyr/test-pool')
     with Pool(name='test-pool') as pool:
-        results = [pool.apply_async(feed, [i, queue]) for i in range(4)]
+        results = [pool.apply_async(feed, [i, queue]) for i in range(5)]
         pool.wait()
 
-    results = [cp.loads(queue.get()) for i in range(4)]
-    assert sorted(results) == range(4)
+    results = [cp.loads(queue.get()) for i in range(5)]
+    assert sorted(results) == range(5)
 
 
 def test_map_async():

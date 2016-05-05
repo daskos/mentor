@@ -1,7 +1,5 @@
 [![Build Status](http://52.0.47.203:8000/api/badges/lensacom/satyr/status.svg)](http://52.0.47.203:8000/lensacom/satyr)
 
-# Satyr
-
 ![satyr](https://s3.amazonaws.com/lensa-rnd-misc/satyr2.png)
 
 A python Mesos framework library. Satyr's intention is to simplify the process of writing frameworks for Mesos. It gives multiple interfaces and each of them covers various levels of complexity needs.

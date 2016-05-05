@@ -139,9 +139,9 @@ class SchedulerDriverProxy(object):
 
         Note that passing a single offer is also supported.
         """
-        self.driver.launchTasks(encode(offer_id),
-                                map(encode, tasks),
-                                encode(filters))
+        return self.driver.launchTasks(encode(offer_id),
+                                       map(encode, tasks),
+                                       encode(filters))
 
     def kill(self, task_id):
         """Kills the specified task.

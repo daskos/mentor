@@ -45,10 +45,10 @@ class Map(dict):
     # def __delattr__(self, k):
     #    del self[k]
 
-    def __missing__(self, k):
-        # TODO: consider not using this, silents errors
-        self[k] = Map()
-        return self[k]
+    # def __missing__(self, k):
+    #    # TODO: consider not using this, silents errors
+    #    self[k] = Map()
+    #    return self[k]
 
     def __hash__(self):
         return hash(tuple(self.items()))
@@ -73,6 +73,10 @@ class MessageProxy(Map):
     proto = Message
 
 
+class Scalar(MessageProxy):
+    proto = mesos_pb2.Value.Scalar
+
+
 class Resource(MessageProxy):
     proto = mesos_pb2.Resource
 
@@ -85,7 +89,7 @@ class ScalarResource(Resource):
     def __init__(self, value=None, **kwargs):
         super(Resource, self).__init__(**kwargs)
         if value is not None:
-            self.scalar.value = value
+            self.scalar = Scalar(value=value)
 
     def __cmp__(self, other):
         if isinstance(other, ScalarResource):
@@ -96,6 +100,9 @@ class ScalarResource(Resource):
             return 1
         else:
             return 0
+
+    def __repr__(self):
+        return "<{}: {}>".format(self.__class__.__name__, self.scalar.value)
 
     def __radd__(self, other):  # to support sum()
         return self + other
@@ -127,6 +134,13 @@ class ScalarResource(Resource):
 
 class ResourcesMixin(object):
 
+    @classmethod
+    def _cast_zero(cls, other=0):
+        if other == 0:
+            return cls(resources=[Cpus(0), Mem(0), Disk(0)])
+        else:
+            return other
+
     @property
     def cpus(self):
         for res in self.resources:
@@ -154,9 +168,12 @@ class ResourcesMixin(object):
     #         if isinstance(res, Ports):
     #             return [(rng.begin, rng.end) for rng in res.ranges.range]
 
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__,
+                                 ', '.join(map(str, self.resources)))
+
     def __cmp__(self, other):
-        if other == 0:
-            other = self.__class__()
+        other = self._cast_zero(other)
         this = (self.cpus, self.mem, self.disk)
         other = (other.cpus, other.mem, other.disk)
 
@@ -168,13 +185,11 @@ class ResourcesMixin(object):
             return 0
 
     def __radd__(self, other):  # to support sum()
-        if other == 0:
-            other = self.__class__()
+        other = self._cast_zero(other)
         return self + other
 
     def __add__(self, other):
-        if other == 0:
-            other = self.__class__()
+        other = self._cast_zero(other)
         # ports = list(set(self.ports) | set(other.ports))
         cpus = self.cpus + other.cpus
         mem = self.mem + other.mem
@@ -184,8 +199,7 @@ class ResourcesMixin(object):
         return mixin
 
     def __sub__(self, other):
-        if other == 0:
-            other = self.__class__()
+        other = self._cast_zero(other)
         # ports = list(set(self.ports) | set(other.ports))
         cpus = self.cpus - other.cpus
         mem = self.mem - other.mem
@@ -195,15 +209,13 @@ class ResourcesMixin(object):
         return mixin
 
     def __iadd__(self, other):
-        if other == 0:
-            other = self.__class__()
+        other = self._cast_zero(other)
         added = self + other
         self.resources = added.resources
         return self
 
     def __isub__(self, other):
-        if other == 0:
-            other = self.__class__()
+        other = self._cast_zero(other)
         subbed = self - other
         self.resources = subbed.resources
         return self
@@ -264,11 +276,21 @@ class Filters(MessageProxy):
 class TaskStatus(MessageProxy):
     proto = mesos_pb2.TaskStatus
 
+    def is_staging(self):
+        return self.state == 'TASK_STAGING'
+
+    def is_starting(self):
+        return self.state == 'TASK_STARTING'
+
+    def is_running(self):
+        return self.state == 'TASK_RUNNING'
+
     def has_succeeded(self):
         return self.state == 'TASK_FINISHED'
 
     def has_failed(self):
-        return self.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED']
+        return self.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED',
+                              'TASK_ERROR']
 
     def has_terminated(self):
         return self.has_succeeded() or self.has_failed()
@@ -296,23 +318,6 @@ class TaskInfo(ResourcesMixin, MessageProxy):
     def status(self, state, **kwargs):  # used on executor side
         return TaskStatus(task_id=self.task_id, state=state, **kwargs)
 
-    def update(self, status):
-        self.on_update(status)
-
-        if status.has_succeeded():
-            self.on_success(status)
-        elif status.has_failed():
-            self.on_fail(status)
-
-    def on_update(self, status):
-        pass
-
-    def on_success(self, status):
-        pass
-
-    def on_fail(self, status):
-        pass
-
 
 class CommandInfo(MessageProxy):
     proto = mesos_pb2.CommandInfo
@@ -320,6 +325,10 @@ class CommandInfo(MessageProxy):
 
 class ContainerInfo(MessageProxy):
     proto = mesos_pb2.ContainerInfo
+
+
+class DockerInfo(MessageProxy):
+    proto = mesos_pb2.ContainerInfo.DockerInfo
 
 
 class Request(MessageProxy):

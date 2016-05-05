@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 from satyr.messages import PythonTask
-from satyr.proxies.messages import (CommandInfo, Cpus, Disk, Mem, TaskID,
-                                    TaskInfo)
+from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
+                                    DockerInfo, Mem, TaskID, TaskInfo)
 from satyr.scheduler import QueueScheduler, Running
 
 
@@ -21,9 +21,10 @@ def docker_command():
     task = TaskInfo(name='test-docker-task',
                     id=TaskID(value='test-docker-task-id'),
                     resources=[Cpus(0.5), Mem(16)],
-                    command=CommandInfo(value='echo 100'))
-    task.container.type = 'DOCKER'
-    task.container.docker.image = 'lensacom/satyr:latest'
+                    command=CommandInfo(value='echo 100'),
+                    container=ContainerInfo(
+                        type='DOCKER',
+                        docker=DockerInfo(image='lensacom/satyr:latest')))
     return task
 
 

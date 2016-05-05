@@ -5,7 +5,7 @@ import logging
 import os
 import signal
 import time
-from collections import deque
+from collections import Counter, deque
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
@@ -88,64 +88,74 @@ class AsyncResult(object):
 class QueueScheduler(Scheduler):
 
     def __init__(self, *args, **kwargs):
-        self.queue = deque()  # holding unscheduled tasks
-        self.running = {}  # holding task_id => task pairs
-        self.results = {}  # holding task_id => async_result pairs
+        self.tasks = {}    # holding task_id => (task, status, result) pairs
+        self.results = {}
+        self.statuses = {}
 
     def is_idle(self):
-        return not len(self.queue) and not len(self.running)
+        return not len(self.tasks)
 
-    def wait(self):
-        while not self.is_idle():
-            time.sleep(0.1)
+    def report(self):
+        states = [status.state for status in self.statuses.values()]
+        counts = Counter(states)
+        message = ', '.join(['{}: {}'.format(key, count)
+                             for key, count in counts.items()])
+        logging.info('Task states: {}'.format(message))
+
+    def wait(self, seconds=-1):
+        with timeout(seconds):
+            while not self.is_idle():
+                time.sleep(0.1)
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-        result = AsyncResult()
-        self.results[task.id] = result
-        self.queue.append(task)
-        return result
+
+        self.tasks[task.id] = task
+        self.statuses[task.id] = task.status('TASK_STAGING')
+        self.results[task.id] = AsyncResult()
+        return self.results[task.id]
 
     def on_offers(self, driver, offers):
-        def commit(tasks, queue, running):
-            for task in tasks:
-                queue.remove(task)
-                running[task.id] = task
+        logging.info('Received offers: {}'.format(sum(offers)))
+        self.report()
 
-        def rollback(tasks, queue, running):
-            for task in tasks:
-                queue.append(task)
-                del running[task.id]
+        staging = [self.tasks[status.task_id]
+                   for status in self.statuses.values() if status.is_staging()]
 
-        bins, skip = bfd(self.queue, offers)
-
-        # filter out empty bins
-        # TODO: verify driver.launch declines in case of empty task list
-        bins = [(offer, tasks) for offer, tasks in bins if len(tasks)]
+        bins, skip = bfd(staging, offers)
 
         for offer, tasks in bins:
-            for task in tasks:
-                task.slave_id = offer.slave_id
             try:
-                commit(tasks, self.queue, self.running)
-                driver.launch(offer.id, tasks)
-            except Exception:  # error occured, log
-                rollback(tasks, self.queue, self.running)
-                logging.error('Exception occured during task launch!')
-            else:  # successfully launched tasks
-                offers.remove(offer)  # the remaining ones will be declined
+                for task in tasks:
+                    task.slave_id = offer.slave_id
+                    self.statuses[task.id] = task.status('TASK_STARTING')
 
-        for offer in offers:
-            driver.decline(offer.id)
+                # running with empty task list will decline the offer
+                driver.launch(offer.id, tasks)
+                self.report()
+            except Exception:
+                logging.error('Exception occured during task launch!')
 
     def on_update(self, driver, status):
+        print(status)
+        self.statuses[status.task_id] = status
+        task = self.tasks[status.task_id]
+
+        logging.info('Updated task {} state {}'.format(
+            status.task_id, status.state))
+        self.report()
+
         if status.has_terminated():
-            task = self.running.pop(status.task_id)
-            result = self.results.pop(status.task_id)
-            result.value = status.data
+            result = self.results[task.id]
             result.success = status.has_succeeded()
-        else:
-            task = self.running[status.task_id]
+            try:
+                result.value = status.data
+            except KeyError:
+                pass
+
+            del self.tasks[task.id]
+            del self.results[task.id]
+            del self.statuses[task.id]
 
         task.update(status)
 

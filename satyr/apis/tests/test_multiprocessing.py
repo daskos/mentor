@@ -39,11 +39,11 @@ def test_apply():
 def test_multiple_apply_async():
     with Pool(name='test-pool') as pool:
         results = [pool.apply_async(lambda a, b: a + b, [1, i])
-                   for i in range(4)]
-        values = [res.get(timeout=10) for res in results]
-        pool.wait()
+                   for i in range(10)]
+        values = [res.get(timeout=20) for res in results]
+        # pool.wait()
 
-    assert values == [i + 1 for i in range(4)]
+    assert values == [i + 1 for i in range(10)]
 
 
 def test_queue_apply_async(zk):

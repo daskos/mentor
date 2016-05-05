@@ -109,7 +109,6 @@ class QueueScheduler(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-
         self.tasks[task.id] = task
         self.statuses[task.id] = task.status('TASK_STAGING')
         self.results[task.id] = AsyncResult()
@@ -131,13 +130,15 @@ class QueueScheduler(Scheduler):
                     self.statuses[task.id] = task.status('TASK_STARTING')
 
                 # running with empty task list will decline the offer
+                logging.info('launched tasks: {}'.format(
+                    ', '.join(map(str, tasks))))
                 driver.launch(offer.id, tasks)
+
                 self.report()
             except Exception:
-                logging.error('Exception occured during task launch!')
+                logging.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
-        print(status)
         self.statuses[status.task_id] = status
         task = self.tasks[status.task_id]
 
@@ -148,10 +149,7 @@ class QueueScheduler(Scheduler):
         if status.has_terminated():
             result = self.results[task.id]
             result.success = status.has_succeeded()
-            try:
-                result.value = status.data
-            except KeyError:
-                pass
+            result.value = status.data
 
             del self.tasks[task.id]
             del self.results[task.id]

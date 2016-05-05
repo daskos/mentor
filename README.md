@@ -2,8 +2,6 @@
 
 # Satyr
 
-![Satyr](http://uploads3.wikiart.org/images/jacob-jordaens/bust-of-satyr-1621.jpg!Blog.jpg)
-
 A python Mesos framework library. Satyr's intention is to simplify the process of writing frameworks for Mesos. It gives multiple interfaces and each of them covers various levels of complexity needs.
 
 ## Examples
@@ -159,4 +157,4 @@ class CustomTask(TaskInfo):
 There's only a handful of configurations need to be set outside of code to get Satyr running. Each of them can be set as an environment variable.
 
 * MESOS_MASTER=zk://127.0.0.1:2181/mesos
-* ZOOKEEPER_HOST=127.0.0.1:2181
+* ZOOKEEPER_HOST=127.0.0.1:2181 (optional)

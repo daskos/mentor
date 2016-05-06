@@ -18,7 +18,6 @@ levels of complexity needs.
 - Easily extensibe QueueScheduler implementation
 - Python multiprocessing.Pool interface
 
-
 ## Install
 
 `pip install satyr` or use [lensa/satyr](https://hub.docker.com/r/lensa/satyr/) Docker image
@@ -61,8 +60,8 @@ with Pool(name='satyr-pool') as pool:
 Basic scheduler to submit various kind of workloads, eg.:
  - bash commands
  - docker executable containers
- - python functions
- - customized tasks (python function executed via pypy)
+ - python callables
+ - customized tasks (e.g. function executed via pypy)
 
 ```python
 from __future__ import print_function

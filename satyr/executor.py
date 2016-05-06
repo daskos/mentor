@@ -59,13 +59,18 @@ class OneOffExecutor(Executor):
     def on_launch(self, driver, task):
         def run_task():
             driver.update(task.status('TASK_RUNNING'))
+            logging.info('Sent TASK_RUNNING status update')
 
             try:
+                logging.info('Executing task...')
                 result = task()
             except Exception as e:
+                logging.exception('Task errored')
                 driver.update(task.status('TASK_FAILED', message=e.message))
+                logging.info('Sent TASK_RUNNING status update')
             else:
                 driver.update(task.status('TASK_FINISHED', data=result))
+                logging.info('Sent TASK_FINISHED status update')
 
         thread = threading.Thread(target=run_task)
         thread.start()

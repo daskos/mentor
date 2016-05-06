@@ -25,20 +25,18 @@ class Pool(Running):
     def join(self):
         self.join()
 
-    def wait(self):
-        self.scheduler.wait()
+    def wait(self, seconds=-1):
+        self.scheduler.wait(seconds)
 
-    def map(self, func, iterable, chunksize=1):
-        results = self.map_async(func, iterable, chunksize)
+    def map(self, func, iterable, chunksize=1, **kwargs):
+        results = self.map_async(func, iterable, chunksize, **kwargs)
         return [result.get(timeout=-1) for result in results]
 
-    def map_async(self, func, iterable, chunksize=1, callback=None):
-        return [self.apply_async(func, (item,)) for item in iterable]
+    def map_async(self, func, iterable, chunksize=1, callback=None, **kwargs):
+        return [self.apply_async(func, (item,), **kwargs) for item in iterable]
 
-    def apply(self, func, args=[], kwds={}):
-        import logging
-        logging.info('apply called')
-        result = self.apply_async(func=func, args=args, kwds=kwds)
+    def apply(self, func, args=[], kwds={}, **kwargs):
+        result = self.apply_async(func=func, args=args, kwds=kwds, **kwargs)
         return result.get(timeout=-1)
 
     def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):

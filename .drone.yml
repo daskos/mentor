@@ -7,7 +7,7 @@ compose:
       - ZK_ID=1
   mesos-master:
     net: host
-    image: mesosphere/mesos-master:0.26.1-2.0.19.ubuntu1404
+    image: mesosphere/mesos-master:0.28.1
     environment:
       - MESOS_ZK=zk://127.0.0.1:2181/mesos
       - MESOS_QUORUM=1
@@ -15,13 +15,13 @@ compose:
       - MESOS_REGISTRY=in_memory
   mesos-slave:
     net: host
-    image: mesosphere/mesos-slave:0.26.1-2.0.19.ubuntu1404
+    image: mesosphere/mesos-slave:0.28.1
     environment:
       - MESOS_MASTER=zk://127.0.0.1:2181/mesos
       - MESOS_CONTAINERIZERS=docker,mesos
       # MESOS_HOSTNAME: SLAVE_IP_GOES_HERE
       - MESOS_PORT=5051
-      - MESOS_RESOURCES=ports(*):[11000-11999]
+      - MESOS_RESOURCES=cpus(*):1.5;ports(*):[11000-11999]
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
       - /usr/local/bin/docker:/usr/bin/docker
@@ -36,10 +36,10 @@ build:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
-      - docker build -t lensacom/satyr .
+      - docker build -t lensa/satyr .
 
   test:
-    image: lensa/mesos-python:0.26.0-py2.7-python-2.7
+    image: lensa/mesos-python:0.27.0-py2.7-python-2.7
     net: host
     environment:
       - MESOS_MASTER=zk://127.0.0.1:2181/mesos

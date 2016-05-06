@@ -1,9 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
+
 import cloudpickle
 from mesos.interface import mesos_pb2
 
-from .proxies.messages import Cpus, Disk, Mem, TaskInfo, TaskStatus
+from .proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
+                               DockerInfo, ExecutorID, ExecutorInfo, Mem,
+                               TaskInfo, TaskStatus)
 
 
 class PickleMixin(object):
@@ -35,18 +39,20 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 resources=[Cpus(0.1), Mem(16), Disk(0)], **kwds):
+                 resources=[Cpus(0.1), Mem(128), Disk(0)], **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.resources = resources
-        # self.executor.name = 'test-executor'
-        self.executor.executor_id.value = self.task_id.value
-        self.executor.resources = resources
-        self.executor.command.value = 'python -m satyr.executor'
-        self.executor.command.shell = True
-        self.executor.container.type = 'DOCKER'
-        self.executor.container.docker.image = 'lensacom/satyr:latest'
-        self.executor.container.docker.network = 'HOST'
-        self.executor.container.docker.force_pull_image = False
+
+        docker = DockerInfo(image='lensa/satyr:latest',
+                            force_pull_image=False,
+                            network='HOST')
+
+        self.executor = ExecutorInfo(
+            executor_id=ExecutorID(value=self.id.value),
+            command=CommandInfo(value='python -m satyr.executor', shell=True),
+            container=ContainerInfo(type='DOCKER', docker=docker))
+        # resources=resources)
+        self.resources = resources
 
         self.data = (fn, args, kwargs)  # TODO: assert fn is callable
 
@@ -56,3 +62,21 @@ class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
 
     def status(self, state, **kwargs):
         return PythonTaskStatus(task_id=self.task_id, state=state, **kwargs)
+
+    def update(self, status):
+        self.on_update(status)
+
+        if status.has_succeeded():
+            self.on_success(status)
+        elif status.has_failed():
+            self.on_fail(status)
+
+    def on_update(self, status):
+        pass
+
+    def on_success(self, status):
+        logging.info('Task {} has been succeded'.format(self.id.value))
+
+    def on_fail(self, status):
+        logging.info('Task {} has been failed due to {}'.format(self.id.value,
+                                                                status.message))

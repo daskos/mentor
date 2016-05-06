@@ -5,24 +5,20 @@ import logging
 import os
 import signal
 import time
-from collections import deque
+from collections import Counter
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
+from .binpack import bfd
 from .interface import Scheduler
 from .proxies import SchedulerProxy
 from .proxies.messages import FrameworkInfo, TaskInfo, encode
 from .utils import timeout
 
 
-class PackError(Exception):
-    pass
-
-
 class Running(object):
 
-    # TODO: envargs
     def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
                  implicit_acknowledge=1, *args, **kwargs):
         scheduler = SchedulerProxy(scheduler)
@@ -92,61 +88,74 @@ class AsyncResult(object):
 class QueueScheduler(Scheduler):
 
     def __init__(self, *args, **kwargs):
-        self.queue = deque()  # holding unscheduled tasks
-        self.running = {}  # holding task_id => task pairs
-        self.results = {}  # holding task_id => async_result pairs
+        self.tasks = {}    # holding task_id => (task, status, result) pairs
+        self.results = {}
+        self.statuses = {}
 
     def is_idle(self):
-        return not len(self.queue) and not len(self.running)
+        return not len(self.tasks)
 
-    def wait(self):
-        while not self.is_idle():
-            time.sleep(0.1)
+    def report(self):
+        states = [status.state for status in self.statuses.values()]
+        counts = Counter(states)
+        message = ', '.join(['{}: {}'.format(key, count)
+                             for key, count in counts.items()])
+        logging.info('Task states: {}'.format(message))
+
+    def wait(self, seconds=-1):
+        with timeout(seconds):
+            while not self.is_idle():
+                time.sleep(0.1)
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-
-        result = AsyncResult()
-        self.results[task.id] = result
-        self.queue.append(task)
-        return result
+        self.tasks[task.id] = task
+        self.statuses[task.id] = task.status('TASK_STAGING')
+        self.results[task.id] = AsyncResult()
+        return self.results[task.id]
 
     def on_offers(self, driver, offers):
-        # TODO: binpacking should be the default
-        def pack(task, offers):
-            for offer in offers:
-                if offer >= task:
-                    task.slave_id = offer.slave_id
-                    return (offer, task)
-            raise PackError('Couldn\'t pack')
+        logging.info('Received offers: {}'.format(sum(offers)))
+        self.report()
 
-        try:
-            # should consider the whole queue as a list with a bin packing
-            # right now it only tries to schedule the first task in the queue
-            task = self.queue.pop()
-            offer, task = pack(task, offers)
-        except PackError:
-            # TODO: should reschedule if any error occurs at launch too
-            self.tasks.append(task)
-        except IndexError:
-            # TODO: log empty queue
-            pass
-        else:
-            offers.pop(offers.index(offer))
-            driver.launch(offer.id, [task])
-            self.running[task.id] = task
-        finally:
-            for offer in offers:
-                driver.decline(offer.id)
+        # maybe limit to the first n tasks
+        staging = [self.tasks[status.task_id]
+                   for status in self.statuses.values() if status.is_staging()]
+
+        # best-fit-decreasing binpacking
+        bins, skip = bfd(staging, offers, cpus=1, mem=1)
+
+        for offer, tasks in bins:
+            try:
+                for task in tasks:
+                    task.slave_id = offer.slave_id
+                    self.statuses[task.id] = task.status('TASK_STARTING')
+
+                # running with empty task list will decline the offer
+                logging.info('launched tasks: {}'.format(
+                    ', '.join(map(str, tasks))))
+                driver.launch(offer.id, tasks)
+
+                self.report()
+            except Exception:
+                logging.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
+        self.statuses[status.task_id] = status
+        task = self.tasks[status.task_id]
+
+        logging.info('Updated task {} state {}'.format(
+            status.task_id, status.state))
+        self.report()
+
         if status.has_terminated():
-            task = self.running.pop(status.task_id)
-            result = self.results.pop(status.task_id)
-            result.value = status.data
+            result = self.results[task.id]
             result.success = status.has_succeeded()
-        else:
-            task = self.running[status.task_id]
+            result.value = status.data
+
+            del self.tasks[task.id]
+            del self.results[task.id]
+            del self.statuses[task.id]
 
         task.update(status)
 

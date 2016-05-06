@@ -114,7 +114,7 @@ class ExecutorDriverProxy(object):
         See Scheduler.statusUpdate for more information about status update
         acknowledgements.
         """
-        logging.info('Driver received status update')
+        logging.info('Executor sends status update')
         return self.driver.sendStatusUpdate(encode(status))
 
     def message(self, data):
@@ -123,5 +123,5 @@ class ExecutorDriverProxy(object):
         These messages are best effort; do not expect a framework message to be
         retransmitted in any reliable fashion.
         """
-        logging.info('Driver received framework message')
+        logging.info('Driver sends framework message')
         return self.driver.sendFrameworkMessage(data)

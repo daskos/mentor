@@ -71,7 +71,9 @@ def container_to_message(container, containers):
 def protobuf_to_dict(pb, containers=CONTAINER_MAP, converters=TYPE_CALLABLE_MAP):
     result = message_to_container(pb, containers)
 
-    for field, value in pb.ListFields():
+    # for field, value in pb.ListFields():  # only non-empty fields
+    for field in pb.DESCRIPTOR.fields:  # empty fields too
+        value = getattr(pb, field.name)
         if (field.message_type and field.message_type.has_options and
                 field.message_type.GetOptions().map_entry):
             converter = dict

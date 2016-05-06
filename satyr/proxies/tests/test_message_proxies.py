@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import pytest
 from mesos.interface import mesos_pb2
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
@@ -66,13 +68,13 @@ def test_map_dot_set(d):
     assert isinstance(m.z.Z, Map)
 
 
-def test_map_set_missing(d):
-    m = Map(**d)
-    m['y']['o']['w'] = 9
-    m.y.w.o = 6
+# def test_map_set_missing(d):
+#     m = Map(**d)
+#     m['y']['o']['w'] = 9
+#     m.y.w.o = 6
 
-    assert m['y']['o']['w'] == 9
-    assert m.y.w.o == 6
+#     assert m['y']['o']['w'] == 9
+#     assert m.y.w.o == 6
 
 
 def test_hash():
@@ -185,6 +187,17 @@ def test_scalar_resource_addition():
     assert s == 13.5
 
 
+def test_scalar_resource_sum():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+    r3 = ScalarResource(value=3)
+
+    s = sum([r1, r2, r3])
+    assert isinstance(s, ScalarResource)
+    assert s == ScalarResource(16.5)
+    assert s == 16.5
+
+
 def test_scalar_resource_subtraction():
     r1 = ScalarResource(value=11.5)
     r2 = ScalarResource(value=2)
@@ -215,12 +228,33 @@ def test_scalar_resource_inplace_subtraction():
     assert r1 == 9.5
 
 
+def test_scalar_resource_multiplication():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    m = r1 * r2
+    assert isinstance(m, ScalarResource)
+    assert m == ScalarResource(23)
+    assert m == 23
+
+
+def test_scalar_resource_division():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    d = r1 / r2
+    assert isinstance(d, ScalarResource)
+    assert d == ScalarResource(5.75)
+    assert d == 5.75
+
+
 def test_resources_mixin_comparison():
     o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
     o2 = Offer(resources=[Cpus(2), Mem(256), Disk(1024)])
 
     t1 = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
     t2 = TaskInfo(resources=[Cpus(1), Mem(256), Disk(512)])
+    t3 = TaskInfo(resources=[Cpus(0.5), Mem(256), Disk(512)])
 
     assert o1.cpus == 1
     assert o1.mem == 128
@@ -249,6 +283,10 @@ def test_resources_mixin_comparison():
     assert o2 >= t2
     assert t2 >= o1
 
+    assert t3 > o1
+    assert t3 <= t2
+    assert t3 > t1
+
 
 def test_resources_mixin_addition():
     o = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
@@ -262,6 +300,21 @@ def test_resources_mixin_addition():
     assert s.mem == 256
     assert s.disk == Disk(0)
     assert s.disk == 0
+
+
+def test_resources_mixin_sum():
+    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+    o2 = Offer(resources=[Cpus(2), Mem(128), Disk(100)])
+    o3 = Offer(resources=[Cpus(0.5), Mem(256), Disk(200)])
+
+    s = sum([o1, o2, o3])
+    assert isinstance(s, ResourcesMixin)
+    assert s.cpus == Cpus(3.5)
+    assert s.cpus == 3.5
+    assert s.mem == Mem(512)
+    assert s.mem == 512
+    assert s.disk == Disk(300)
+    assert s.disk == 300
 
 
 def test_resources_mixin_subtraction():

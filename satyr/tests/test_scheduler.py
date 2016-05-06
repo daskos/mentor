@@ -41,10 +41,10 @@ def test_launch_decline(mocker, python_task, offers):
     assert isinstance(args[1][0], PythonTask)
     assert args[1][0].task_id.value == 'test-task-id'
 
-    calls = driver.decline.call_args_list
-    args, kwargs = calls[0]
+    args, kwargs = calls[1]
     assert isinstance(args[0], OfferID)
     assert args[0].value == 'second-offer'
+    assert args[1] == []  # declines via launch empty task list
 
 
 def test_task_callbacks(mocker, python_task, offers):
@@ -83,7 +83,6 @@ def test_task_result(mocker, python_task, offers):
 
     result = sched.submit(python_task)
     sched.on_offers(driver, offers)
-
     sched.on_update(driver, python_task.status('TASK_RUNNING'))
     sched.on_update(driver, python_task.status('TASK_FINISHED',
                                                data=python_task()))

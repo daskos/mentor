@@ -46,3 +46,17 @@ build:
       - ZOOKEEPER_HOST=127.0.0.1:2181
     commands:
       - python setup.py test
+
+
+publish:
+  docker:
+    username: $$DOCKERHUB_USERNAME
+    password: $$DOCKERHUB_PASSWORD
+    email: $$DOCKERHUB_EMAIL
+    repo: lensa/satyr
+    file: Dockerfile
+    tag:
+      - $$TAG
+      - latest
+    when:
+      event: [tag]

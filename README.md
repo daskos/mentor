@@ -1,14 +1,43 @@
-[![Build Status](http://52.0.47.203:8000/api/badges/lensacom/satyr/status.svg)](http://52.0.47.203:8000/lensacom/satyr)
+[![Build Status](http://drone.lensa.com:8000/api/badges/lensacom/satyr/status.svg)](http://drone.lensa.com:8000/lensacom/satyr)
 
 ![satyr](https://s3.amazonaws.com/lensa-rnd-misc/satyr2.png)
 
-A python Mesos framework library. Satyr's intention is to simplify the process of writing frameworks for Mesos. It gives multiple interfaces and each of them covers various levels of complexity needs.
+# An extensible Mesos library for Python
+###### aka. the distributed snake-charmer
+
+
+Satyr's intention is to simplify the process of writing python frameworks
+for Mesos. Satyr provides multiple components and interfaces to cover various
+levels of complexity needs.
+
+## Notable Features
+
+- Comfortable Pythonic interface instead of the C++ syntax
+- Magical Protobuf wrapper to easily extend messages with custom functionality
+- Multiple weighted Bin-Packing heuristics for optimized scheduling
+- Easily extensibe QueueScheduler implementation
+- Python multiprocessing.Pool interface
+
+
+## Install
+
+`pip install satyr` or use [lensa/satyr](https://hub.docker.com/r/lensa/satyr/) Docker image
+
+Requirements:
+- mesos.interface (installable via pip)
+- mesos.native (binary .egg downloadable from mesosphere.io)
+
+Configuration:
+- `MESOS_MASTER=zk://127.0.0.1:2181/mesos`
+
 
 ## Examples
 
 ### Multiprocessing
 
-This is the most simple use case. It's similar to python's own [multiprocessing interface](https://docs.python.org/2/library/multiprocessing.html) but can run your processes concurrently on a Mesos cluster.
+This is the most simple use case. It's similar to python's
+[multiprocessing interface](https://docs.python.org/2/library/multiprocessing.html)
+but runs processes on a Mesos cluster (concurrently).
 
 ```python
 from __future__ import print_function
@@ -27,9 +56,13 @@ with Pool(name='satyr-pool') as pool:
     print(res2.get())
 ```
 
-### QueueScheduler
+### Work Queue Scheduler
 
-The multiprocessing interface basicly hides the QueueScheduler but it can be useful to submit more fine grained tasks (For example your processes need more resources than the defaults.)
+Basic scheduler to submit various kind of workloads, eg.:
+ - bash commands
+ - docker executable containers
+ - python functions
+ - customized tasks (python function executed via pypy)
 
 ```python
 from __future__ import print_function
@@ -43,14 +76,16 @@ task = PythonTask(fn=sum, args=[range(10)], name='satyr-task',
                   resources=[Cpus(0.1), Mem(128), Disk(512)])
 
 with Running(scheduler, name='satyr-scheduler'):
-    res = scheduler.submit(task)
-    res.wait()
-    print(res.get())
+    res = scheduler.submit(task)  # return AsyncResult
+    print(res.get(timeout=30))
 ```
 
-### Custom scheduler
+### Custom Scheduler
 
-You can make your own scheduler built on QueueScheduler or for more complex needs there's a [Scheduler](satyr/interface.py) interface which you can use to create one from scratch. (However in this case you'll have to implement some of the functionalities already in [QueueScheduler](satyr/scheduler.py))
+You can make your own scheduler built on QueueScheduler or for more complex
+needs there's a [Scheduler](satyr/interface.py) interface which you can use
+to create one from scratch. (However in this case you'll have to implement
+some of the functionalities already in [QueueScheduler](satyr/scheduler.py))
 
 ```python
 from __future__ import print_function
@@ -60,13 +95,18 @@ from satyr.proxies.messages import Disk, Mem, Cpus
 
 
 class CustomScheduler(QueueScheduler):
+
     def on_update(self, driver, status):
         """You can hook on the events defined in the Scheduler interface.
+
         They're just more conveniantly named methods for the basic
         mesos.interface functions but this is how you can add some
-        custom logic to your framework in an easy manner."""
+        custom logic to your framework in an easy manner.
+        """
+        logging.info(
+            "Status update received for task {}".format(status.task_id))
         super(CustomScheduler, self).on_update(driver, status)
-        print(status.state)
+
 
 scheduler = CustomScheduler()
 task = PythonTask(fn=sum, args=[range(9)], name='satyr-task',
@@ -74,11 +114,13 @@ task = PythonTask(fn=sum, args=[range(9)], name='satyr-task',
 
 with Running(scheduler, name='satyr-custom-scheduler'):
     res = scheduler.submit(task)
-    res.wait()
-    print(res.get())
+    print(res.get(timeout=60))
 ```
 
-Also this way you can easily implement your own resource offer handling logic by overriding the `on_offers(self, driver, offers)` method in which we give you a helping hand with comparable Offers and TaskInfos. (Comparison is based on provided and required resources.)
+Also this way you can easily implement your own resource offer handling logic by
+overriding the `on_offers(self, driver, offers)` method in which we give you a
+helping hand with comparable Offers and TaskInfos (basic arithmetic operators
+are also overloaded).
 
 ```python
 from satyr.interface import Scheduler
@@ -89,20 +131,39 @@ class CustomScheduler(Scheduler):
     ...
     def on_offers(self, driver, offers):
         ...
-        # We're pretty sure you'll not be doing anything like this.
-        offer = Offer(resources=[Cpus(2), Mem(512)])
-        task = TaskInfo(resources=[Cpus(0.5), Mem(128)])
-        offer > task  # True
+        task = self.get_next_task()
+        for offer in offers
+            if task < offer:
+                task.slave_id = offer.slave_id
+                driver.launch(offer, [task])
+        # decline unused offers or launch with empty task list
         ...
 ```
 
-Currently we only have some basic resource handling but we're up to solve this issue with some nice Bin-Packing heuristics (First-Fit(-Decreasing), Max-Rest, Best-Fit(-Decreasing)).
+## Optimized Task Placement
 
-### Built in task types
+Satyr implements multiple weighted heuristics to solve the
+[Bin-Packing Problem](https://en.wikipedia.org/wiki/Bin_packing_problem):
 
-#### Command
+- First-Fit
+- First-Fit-Decreasing
+- Max-Rest
+- Best-Fit
+- Best-Fit-Decreasing
 
-The most basic task executes a simple command, Mesos will run CommandInfo's value with `/bin/sh -c`. Also, if you want to run your task in a Docker container you can provide some additional information for the task.
+see [binpack.py](satyr/binpack.py).
+
+The benefits of using bin-packing has been proven by
+[Netflix/Fenzo](https://github.com/Netflix/Fenzo) in
+[Heterogeneous Resource Scheduling Using Apache Mesos](http://events.linuxfoundation.org/sites/events/files/slides/Prezo-at-MesosCon2015-Final.pdf)
+
+## Built in task types
+
+### Command
+
+The most basic task executes a simple command, Mesos will run CommandInfo's
+value with `/bin/sh -c`. Also, if you want to run your task in a Docker
+container you can provide some additional information for the task.
 
 ```python
 from satyr.proxies.messages import TaskInfo, CommandInfo
@@ -113,22 +174,29 @@ task.container.type = 'DOCKER'
 task.container.docker.image = 'lensacom/satyr:latest'
 ```
 
-#### Python
+### Python
 
-As it's name says a [PythonTask](/satyr/messages.py) is capable of running some python code on your cluster. It sends pickled methods to the executor which then will run it. (In fact it wraps the base TaskInfo.) Note that python tasks will run in Docker containers by default.
+[PythonTask](/satyr/messages.py) is capable of running arbitrary python code on
+your cluster. It sends [cloudpickled](https://github.com/cloudpipe/cloudpickle)
+methods and arguments to the matched mesos-slave for execution.
+Note that python tasks run in [lensa/satyr](https://hub.docker.com/r/lensa/satyr/)
+Docker container by default.
 
 ```python
 from satyr.messages import PythonTask
 
 
 # You can pass a function or a lambda in place of sum for fn.
-task = PythonTask(name='python-task',
-                  fn=sum, args=[range(5)])
+task = PythonTask(name='python-task', fn=sum, args=[range(5)])
 ```
 
-### Custom task
+### Custom Task
 
-Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py) or any existing tasks. If you're walking down the former path you'll most likely have to deal with protobuf in your code; worry not, we have some magic wrappers for you to provide easely extensible messages. (**TODO** Clear this up.)
+Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py)
+or any existing descendants.
+If you're walking down the former path you'll most likely have to deal with
+protobuf in your code; worry not, we have some magic wrappers for you to provide
+customizable messages.
 
 ```python
 from __future__ import print_function
@@ -137,9 +205,14 @@ from mesos.interface import mesos_pb2
 
 
 class CustomTask(TaskInfo):
+    # descriptive protobuf template the wrapper matched against
     proto = mesos_pb2.TaskInfo(
         labels=mesos_pb2.Labels(
             labels=[mesos_pb2.Label(key='custom')]))
+
+    @property
+    def uppercase_task_name():
+        return self.name.upper()
 
     def on_update(self, status):
          logging.info('Custom task has received a status update')
@@ -148,13 +221,42 @@ class CustomTask(TaskInfo):
          print("Arbitrary stuff")
 ```
 
-### Custom executor
+### One-Off Python Task Executor
 
-**TODO**
+This Executor implementation simply runs the received python function with the
+provided arguments, then sends back the result in a reliable fashion.
 
-## Configuration
+```py
+class OneOffExecutor(Executor):
 
-There's only a handful of configurations need to be set outside of code to get Satyr running. Each of them can be set as an environment variable.
+    def on_launch(self, driver, task):
+        def run_task():
+            driver.update(task.status('TASK_RUNNING'))
+            logging.info('Sent TASK_RUNNING status update')
 
-* MESOS_MASTER=zk://127.0.0.1:2181/mesos
-* ZOOKEEPER_HOST=127.0.0.1:2181 (optional)
+            try:
+                logging.info('Executing task...')
+                result = task()
+            except Exception as e:
+                logging.exception('Task errored')
+                driver.update(task.status('TASK_FAILED', message=e.message))
+                logging.info('Sent TASK_RUNNING status update')
+            else:
+                driver.update(task.status('TASK_FINISHED', data=result))
+                logging.info('Sent TASK_FINISHED status update')
+
+        thread = threading.Thread(target=run_task)
+        thread.start()
+```
+
+## Warning (at the end)
+
+This is a pre-release!
+
+- proper documentation
+- python futures api
+- more detailed examples
+- and CONTRIBUTION guide
+- dask.mesos backend
+
+are coming!

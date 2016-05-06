@@ -1,8 +1,30 @@
-[![Build Status](http://52.0.47.203:8000/api/badges/lensacom/satyr/status.svg)](http://52.0.47.203:8000/lensacom/satyr)
+[![Build Status](http://drone.lensa.com:8000/api/badges/lensacom/satyr/status.svg)](http://drone.lensa.com:8000/lensacom/satyr)
 
 ![satyr](https://s3.amazonaws.com/lensa-rnd-misc/satyr2.png)
 
-A python Mesos framework library. Satyr's intention is to simplify the process of writing frameworks for Mesos. It gives multiple interfaces and each of them covers various levels of complexity needs.
+A python Mesos framework library, a distributed snake-charmer.
+
+Satyr's intention is to simplify the process of writing frameworks for Mesos.
+It gives multiple interfaces and each of them covers various levels of complexity needs.
+
+## Features
+
+- Pythonic interface instead of C++ one
+- Multiple weighted Bin-Packing heuristics
+- Python multiprocessing interface
+- Magical Protobuf wrapper to easily extend messages with custom functionality 
+
+
+## Install
+
+```python
+pip install satyr
+```
+
+## Docker Image
+
+At DockerHub lensa/satyr
+
 
 ## Examples
 
@@ -60,11 +82,14 @@ from satyr.proxies.messages import Disk, Mem, Cpus
 
 
 class CustomScheduler(QueueScheduler):
+
     def on_update(self, driver, status):
         """You can hook on the events defined in the Scheduler interface.
+        
         They're just more conveniantly named methods for the basic
         mesos.interface functions but this is how you can add some
-        custom logic to your framework in an easy manner."""
+        custom logic to your framework in an easy manner.
+        """
         super(CustomScheduler, self).on_update(driver, status)
         print(status.state)
 
@@ -74,7 +99,7 @@ task = PythonTask(fn=sum, args=[range(9)], name='satyr-task',
 
 with Running(scheduler, name='satyr-custom-scheduler'):
     res = scheduler.submit(task)
-    res.wait()
+    res.wait(seconds=60)  # timeout
     print(res.get())
 ```
 
@@ -97,6 +122,7 @@ class CustomScheduler(Scheduler):
 ```
 
 Currently we only have some basic resource handling but we're up to solve this issue with some nice Bin-Packing heuristics (First-Fit(-Decreasing), Max-Rest, Best-Fit(-Decreasing)).
+
 
 ### Built in task types
 
@@ -122,13 +148,13 @@ from satyr.messages import PythonTask
 
 
 # You can pass a function or a lambda in place of sum for fn.
-task = PythonTask(name='python-task',
-                  fn=sum, args=[range(5)])
+task = PythonTask(name='python-task', fn=sum, args=[range(5)])
 ```
 
 ### Custom task
 
-Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py) or any existing tasks. If you're walking down the former path you'll most likely have to deal with protobuf in your code; worry not, we have some magic wrappers for you to provide easely extensible messages. (**TODO** Clear this up.)
+Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py) or any existing tasks.
+If you're walking down the former path you'll most likely have to deal with protobuf in your code; worry not, we have some magic wrappers for you to provide easely extensible messages. (**TODO** Clear this up.)
 
 ```python
 from __future__ import print_function
@@ -157,4 +183,3 @@ class CustomTask(TaskInfo):
 There's only a handful of configurations need to be set outside of code to get Satyr running. Each of them can be set as an environment variable.
 
 * MESOS_MASTER=zk://127.0.0.1:2181/mesos
-* ZOOKEEPER_HOST=127.0.0.1:2181 (optional)

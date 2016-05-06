@@ -2,7 +2,7 @@
 
 ![satyr](https://s3.amazonaws.com/lensa-rnd-misc/satyr2.png)
 
-# An extensible Mesos framework library for Python
+# An extensible Mesos library for Python
 ###### aka. the distributed snake-charmer
 
 
@@ -10,29 +10,25 @@ Satyr's intention is to simplify the process of writing python frameworks
 for Mesos. Satyr provides multiple components and interfaces to cover various
 levels of complexity needs.
 
-## Features
+## Notable Features
 
-- Pythonic interface instead of C++ one
-- Multiple weighted Bin-Packing heuristics
-- Python multiprocessing interface
+- Comfortable Pythonic interface instead of the C++ syntax
 - Magical Protobuf wrapper to easily extend messages with custom functionality
+- Multiple weighted Bin-Packing heuristics for optimized scheduling
+- Easily extensibe QueueScheduler implementation
+- Python multiprocessing.Pool interface
 
-## Requirements
-
-- mesos.interface (installable via pip)
-- mesos.native (binary .egg downloadable from mesosphere.io)
 
 ## Install
 
 `pip install satyr` or use [lensa/satyr](https://hub.docker.com/r/lensa/satyr/) Docker image
 
+Requirements:
+- mesos.interface (installable via pip)
+- mesos.native (binary .egg downloadable from mesosphere.io)
 
-### Configuration
-
-There's only a handful of configurations need to be set outside of code to get
-Satyr running. Each of them can be set as an environment variable.
-
-`MESOS_MASTER=zk://127.0.0.1:2181/mesos`
+Configuration:
+- `MESOS_MASTER=zk://127.0.0.1:2181/mesos`
 
 
 ## Examples
@@ -261,5 +257,6 @@ This is a pre-release!
 - python futures api
 - more detailed examples
 - and CONTRIBUTION guide
+- dask.mesos backend
 
 are coming!

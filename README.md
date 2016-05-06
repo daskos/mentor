@@ -156,7 +156,7 @@ The benefits of using bin-packing has been proven by
 [Netflix/Fenzo](https://github.com/Netflix/Fenzo) in
 [Heterogeneous Resource Scheduling Using Apache Mesos](http://events.linuxfoundation.org/sites/events/files/slides/Prezo-at-MesosCon2015-Final.pdf)
 
-## Built in task types
+## Built in Task Types
 
 ### Command
 
@@ -189,7 +189,7 @@ from satyr.messages import PythonTask
 task = PythonTask(name='python-task', fn=sum, args=[range(5)])
 ```
 
-### Custom Task
+## Custom Task
 
 Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py)
 or any existing descendants.
@@ -220,7 +220,7 @@ class CustomTask(TaskInfo):
          print("Arbitrary stuff")
 ```
 
-### One-Off Python Task Executor
+## One-Off Executor
 
 This Executor implementation simply runs the received python function with the
 provided arguments, then sends back the result in a reliable fashion.

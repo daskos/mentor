@@ -62,6 +62,7 @@ def test_queue_apply_async(zk, resources):
                    for i in range(5)]
         pool.wait(seconds=30)
 
+    time.sleep(1)
     results = [cp.loads(queue.get()) for i in range(5)]
     assert sorted(results) == range(5)
 

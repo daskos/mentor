@@ -38,13 +38,13 @@ def test_launch_decline(mocker, python_task, offers):
     args, kwargs = calls[0]
     assert isinstance(args[0], OfferID)
     assert args[0].value == 'first-offer'
-    assert args[1] == []  # declines via launch empty task list
+    assert isinstance(args[1][0], PythonTask)
+    assert args[1][0].task_id.value == 'test-task-id'
 
     args, kwargs = calls[1]
     assert isinstance(args[0], OfferID)
-    assert args[0].value == 'second-offer'  # bin packing prefers second offer
-    assert isinstance(args[1][0], PythonTask)
-    assert args[1][0].task_id.value == 'test-task-id'
+    assert args[0].value == 'second-offer'
+    assert args[1] == []  # declines via launch empty task list
 
 
 def test_task_callbacks(mocker, python_task, offers):

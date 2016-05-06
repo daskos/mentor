@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import pytest
 from mesos.interface import mesos_pb2
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
@@ -226,12 +228,33 @@ def test_scalar_resource_inplace_subtraction():
     assert r1 == 9.5
 
 
+def test_scalar_resource_multiplication():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    m = r1 * r2
+    assert isinstance(m, ScalarResource)
+    assert m == ScalarResource(23)
+    assert m == 23
+
+
+def test_scalar_resource_division():
+    r1 = ScalarResource(value=11.5)
+    r2 = ScalarResource(value=2)
+
+    d = r1 / r2
+    assert isinstance(d, ScalarResource)
+    assert d == ScalarResource(5.75)
+    assert d == 5.75
+
+
 def test_resources_mixin_comparison():
     o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
     o2 = Offer(resources=[Cpus(2), Mem(256), Disk(1024)])
 
     t1 = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
     t2 = TaskInfo(resources=[Cpus(1), Mem(256), Disk(512)])
+    t3 = TaskInfo(resources=[Cpus(0.5), Mem(256), Disk(512)])
 
     assert o1.cpus == 1
     assert o1.mem == 128
@@ -259,6 +282,10 @@ def test_resources_mixin_comparison():
     assert o2 >= t1
     assert o2 >= t2
     assert t2 >= o1
+
+    assert t3 > o1
+    assert t3 <= t2
+    assert t3 > t1
 
 
 def test_resources_mixin_addition():

@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import operator
 from functools import partial
 from uuid import uuid4
 
@@ -92,11 +93,10 @@ class ScalarResource(Resource):
             self.scalar = Scalar(value=value)
 
     def __cmp__(self, other):
-        if isinstance(other, ScalarResource):
-            other = other.scalar.value
-        if self.scalar.value < other:
+        first, second = float(self), float(other)
+        if first < second:
             return -1
-        elif self.scalar.value > other:
+        elif first > second:
             return 1
         else:
             return 0
@@ -104,32 +104,57 @@ class ScalarResource(Resource):
     def __repr__(self):
         return "<{}: {}>".format(self.__class__.__name__, self.scalar.value)
 
-    def __radd__(self, other):  # to support sum()
-        return self + other
+    def __float__(self):
+        return float(self.scalar.value)
+
+    @classmethod
+    def _op(cls, op, first, second):
+        value = op(float(first), float(second))
+        return cls(value=value)
 
     def __add__(self, other):
-        if isinstance(other, ScalarResource):
-            other = other.scalar.value
-        value = self.scalar.value + other
-        return self.__class__(value=value)
+        return self._op(operator.add, self, other)
+
+    def __radd__(self, other):
+        return self._op(operator.add, other, self)
 
     def __sub__(self, other):
-        if isinstance(other, ScalarResource):
-            other = other.scalar.value
-        value = self.scalar.value - other
-        return self.__class__(value=value)
+        return self._op(operator.sub, self, other)
+
+    def __rsub__(self, other):
+        return self._op(operator.sub, other, self)
+
+    def __mul__(self, other):
+        return self._op(operator.mul, self, other)
+
+    def __rmul__(self, other):
+        return self._op(operator.mul, other, self)
+
+    def __truediv__(self, other):
+        return self._op(operator.truediv, self, other)
+
+    def __rtruediv__(self, other):
+        return self._op(operator.truediv, other, self)
 
     def __iadd__(self, other):
-        if isinstance(other, ScalarResource):
-            other = other.scalar.value
-        self.scalar.value += other
+        self.scalar.value = float(self._op(operator.add, self, other))
         return self
 
     def __isub__(self, other):
-        if isinstance(other, ScalarResource):
-            other = other.scalar.value
-        self.scalar.value -= other
+        self.scalar.value = float(self._op(operator.sub, self, other))
         return self
+
+
+class Cpus(ScalarResource):
+    proto = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
+
+
+class Mem(ScalarResource):
+    proto = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
+
+
+class Disk(ScalarResource):
+    proto = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
 
 
 class ResourcesMixin(object):
@@ -174,12 +199,16 @@ class ResourcesMixin(object):
 
     def __cmp__(self, other):
         other = self._cast_zero(other)
-        this = (self.cpus, self.mem, self.disk)
-        other = (other.cpus, other.mem, other.disk)
 
-        if this < other:
+        if all([self.cpus < other.cpus,
+                self.mem < other.mem,
+                self.disk < other.disk]):
+            # all resources are smaller the task will fit into offer
             return -1
-        elif this > other:
+        elif any([self.cpus > other.cpus,
+                  self.mem > other.mem,
+                  self.disk > other.disk]):
+            # any resources is bigger task won't fit into offer
             return 1
         else:
             return 0
@@ -219,18 +248,6 @@ class ResourcesMixin(object):
         subbed = self - other
         self.resources = subbed.resources
         return self
-
-
-class Cpus(ScalarResource):
-    proto = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
-
-
-class Mem(ScalarResource):
-    proto = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
-
-
-class Disk(ScalarResource):
-    proto = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
 
 
 class FrameworkID(MessageProxy):

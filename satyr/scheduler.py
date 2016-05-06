@@ -118,10 +118,12 @@ class QueueScheduler(Scheduler):
         logging.info('Received offers: {}'.format(sum(offers)))
         self.report()
 
+        # maybe limit to the first n tasks
         staging = [self.tasks[status.task_id]
                    for status in self.statuses.values() if status.is_staging()]
 
-        bins, skip = bfd(staging, offers)
+        # best-fit-decreasing binpacking
+        bins, skip = bfd(staging, offers, cpus=1, mem=1)
 
         for offer, tasks in bins:
             try:

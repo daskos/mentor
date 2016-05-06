@@ -9,8 +9,12 @@ def weight(items, **kwargs):
     scaled = []
     for attr, weight in kwargs.items():
         values = [float(getattr(item, attr)) for item in items]
-        s = sum(values)
-        scaled.append([weight * (v / s) for v in values])
+        try:
+            s = sum(values)
+            scaled.append([weight * (v / s) for v in values])
+        except ZeroDivisionError:
+            # s equals to zero, attr wont contribute
+            scaled.append([0] * len(items))
 
     return map(sum, zip(*scaled))
 

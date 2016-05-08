@@ -13,7 +13,7 @@ setup(name='satyr',
       maintainer_email='krisztian.szucs@lensa.com',
       license='Apache License, Version 2.0',
       keywords='mesos framework multiprocessing',
-      packages=['satyr'],
+      packages=['satyr', 'satyr.proxies', 'satyr.apis'],
       long_description=(open('README.md').read() if exists('README.md')
                         else ''),
       install_requires=['cloudpickle', 'kazoo'],

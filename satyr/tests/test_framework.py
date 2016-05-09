@@ -97,6 +97,23 @@ def test_docker_python(mocker, docker_python):
     assert args[1].state == 'TASK_FINISHED'
 
 
+def test_docker_python_exception():
+    sched = QueueScheduler()
+
+    def error():
+        raise Exception('Dummy exception on executor side!')
+
+    task = PythonTask(id=TaskID(value='test-python-task-id'),
+                      fn=error, name='test-python-task-name',
+                      resources=[Cpus(0.1), Mem(64), Disk(0)])
+
+    with Running(sched, name='test-scheduler'):
+        result = sched.submit(task)
+        with pytest.raises(Exception) as e:
+            result.get()
+        assert e.value.message == 'Dummy exception on executor side!'
+
+
 def test_multiple_submissions(mocker, docker_python):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')

@@ -61,7 +61,7 @@ def test_failed_status_updates(mocker):
     status = args[0]
     assert isinstance(status, PythonTaskStatus)
     assert status.state == 'TASK_FAILED'
-    assert status.data is None
+    assert isinstance(status.data, Exception)
     assert status.message == 'Booom!'
 
 

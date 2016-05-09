@@ -1,4 +1,6 @@
+import threading
 import time
+from Queue import Empty
 
 import cloudpickle as cp
 import pytest
@@ -10,6 +12,32 @@ from satyr.utils import TimeoutError
 @pytest.fixture
 def resources():
     return [Cpus(0.1), Mem(128), Disk(0)]
+
+
+def test_queue_size(zk):
+    queue = Queue(zk, '/satyr/size')
+    assert queue.empty()
+    assert queue.qsize() == 0
+
+    queue.put(cp.dumps(range(5)))
+    assert queue.empty() is False
+    assert queue.qsize() == 1
+
+
+def test_queue_blocking_get(zk):
+    queue = Queue(zk, '/satyr/blocking')
+
+    def delayed_put():
+        import time
+        time.sleep(2)
+        queue.put(cp.dumps(range(5)))
+
+    t = threading.Thread(target=delayed_put)
+    t.start()
+    with pytest.raises(Empty):
+        queue.get(block=True, timeout=1)
+
+    assert queue.get(block=True, timeout=2) == cp.dumps(range(5))
 
 
 def test_apply_async():

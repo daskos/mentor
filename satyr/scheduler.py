@@ -71,7 +71,10 @@ class AsyncResult(object):
         if self.successful():
             return self.value
         else:
-            raise ValueError('Async result indicate task failed!')
+            try:
+                raise self.value
+            except TypeError:
+                raise ValueError('Async result indicate task failed!')
 
     def wait(self, seconds=60):
         with timeout(seconds):

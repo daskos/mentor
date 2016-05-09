@@ -1,12 +1,52 @@
 from __future__ import absolute_import, division, print_function
 
+import time
+from Queue import Empty
+
+import cloudpickle
+
 from ..messages import PythonTask
-from ..queue import Queue
+from ..queue import Queue as ZkQueue
 from ..scheduler import AsyncResult, QueueScheduler, Running
+from ..utils import timeout as seconds
+from ..utils import TimeoutError
 
 __all__ = ('Pool',
            'Queue',
            'AsyncResult')
+
+
+class Queue(ZkQueue):  # multiprocessing compatible queue
+
+    def __bool__(self):
+        return True
+
+    def __nonzero__(self):
+        return True
+
+    def get(self, block=True, timeout=-1):
+        result = super(Queue, self).get()
+
+        if block:
+            try:
+                with seconds(timeout):
+                    while result is None:
+                        result = super(Queue, self).get()
+                        time.sleep(0.1)
+            except TimeoutError:
+                raise Empty
+
+        return cloudpickle.loads(result)
+
+    def put(self, item):
+        value = cloudpickle.dumps(item)
+        return super(Queue, self).put(value)
+
+    def qsize(self):
+        return len(self)
+
+    def empty(self):
+        return len(self) == 0
 
 
 class Pool(Running):

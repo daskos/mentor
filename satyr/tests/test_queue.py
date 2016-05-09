@@ -1,4 +1,5 @@
 import cloudpickle as cp
+import pytest
 from satyr.queue import LockingQueue, Queue
 
 
@@ -11,7 +12,7 @@ def test_queue_put_get(zk):
 def test_locking_queue_put_get(zk):
     queue = LockingQueue(zk, '/satyr/putget_locking')
     queue.put(cp.dumps(range(5)))
-    assert cp.loads(queue.get()) == range(5)
+    assert queue.get() == cp.dumps(range(5))
     queue.consume()
 
 

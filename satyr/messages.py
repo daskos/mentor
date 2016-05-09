@@ -32,29 +32,23 @@ class PythonTaskStatus(PickleMixin, TaskStatus):
         self.data = data
 
 
-class PythonTask(PickleMixin, TaskInfo):  # TODO: maybe rename basetask
+class PythonTask(PickleMixin, TaskInfo):
 
     proto = mesos_pb2.TaskInfo(
         labels=mesos_pb2.Labels(
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 resources=[Cpus(0.1), Mem(128), Disk(0)], **kwds):
+                 docker='lensa/satyr:latest', command='python -m satyr.executor',
+                 resources=[Cpus(0.1), Mem(128)], **kwds):
         super(PythonTask, self).__init__(**kwds)
-        self.resources = resources
-
-        docker = DockerInfo(image='lensa/satyr:latest',
-                            force_pull_image=False,
-                            network='HOST')
-
         self.executor = ExecutorInfo(
             executor_id=ExecutorID(value=self.id.value),
-            command=CommandInfo(value='python -m satyr.executor', shell=True),
-            container=ContainerInfo(type='DOCKER', docker=docker))
-        # resources=resources)
+            command=CommandInfo(value=command, shell=True),
+            container=ContainerInfo(type='DOCKER', docker=DockerInfo(
+                image=docker, force_pull_image=False, network='HOST')))
         self.resources = resources
-
-        self.data = (fn, args, kwargs)  # TODO: assert fn is callable
+        self.data = (fn, args, kwargs)
 
     def __call__(self):
         fn, args, kwargs = self.data

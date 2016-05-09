@@ -66,7 +66,9 @@ class OneOffExecutor(Executor):
                 result = task()
             except Exception as e:
                 logging.exception('Task errored')
-                driver.update(task.status('TASK_FAILED', message=e.message))
+                driver.update(task.status('TASK_FAILED',
+                                          data=e,
+                                          message=e.message))
                 logging.info('Sent TASK_RUNNING status update')
             else:
                 driver.update(task.status('TASK_FINISHED', data=result))

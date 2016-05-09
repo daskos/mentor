@@ -49,6 +49,14 @@ build:
 
 
 publish:
+  pypi:
+    repository: https://pypi.python.org/pypi
+    username: $$PYPI_USERNAME
+    password: $$PYPI_PASSWORD
+    distributions:
+      - sdist
+    when:
+      event: [tag]
   docker:
     username: $$DOCKERHUB_USERNAME
     password: $$DOCKERHUB_PASSWORD

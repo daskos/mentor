@@ -6,7 +6,7 @@ import cloudpickle
 from mesos.interface import mesos_pb2
 
 from .proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
-                               DockerInfo, ExecutorID, ExecutorInfo, Mem,
+                               DockerInfo, Environment, ExecutorInfo, Mem,
                                TaskInfo, TaskStatus)
 
 
@@ -39,16 +39,54 @@ class PythonTask(PickleMixin, TaskInfo):
             labels=[mesos_pb2.Label(key='python')]))
 
     def __init__(self, fn=None, args=[], kwargs={},
-                 docker='lensa/satyr:latest', command='python -m satyr.executor',
-                 resources=[Cpus(0.1), Mem(128)], **kwds):
-        super(PythonTask, self).__init__(**kwds)
+                 resources=[Cpus(0.1), Mem(128), Disk(0)],
+                 command='python -m satyr.executor', envs={}, uris=[],
+                 docker='lensa/satyr:latest', **kwds):
         self.executor = ExecutorInfo(
-            executor_id=ExecutorID(value=self.id.value),
-            command=CommandInfo(value=command, shell=True),
             container=ContainerInfo(type='DOCKER', docker=DockerInfo(
-                image=docker, force_pull_image=False, network='HOST')))
-        self.resources = resources
+                force_pull_image=False, network='HOST')),
+            command=CommandInfo(shell=True))
         self.data = (fn, args, kwargs)
+        self.envs = envs
+        self.uris = uris
+        self.docker = docker
+        self.command = command
+        self.resources = resources
+        super(PythonTask, self).__init__(**kwds)
+
+    @property
+    def uris(self):
+        return [uri.value for uri in self.executor.command.uris]
+
+    @uris.setter
+    def uris(self, value):
+        self.executor.command.uris = [{'value': v} for v in value]
+
+    @property
+    def envs(self):
+        envs = self.executor.command.environment.variables
+        return {env.name: env.value for env in envs}
+
+    @envs.setter
+    def envs(self, value):
+        envs = [{'name': k, 'value': v} for k, v in value.items()]
+        self.executor.command.environment = Environment(variables=envs)
+
+    @property
+    def command(self):
+        return self.executor.command.value
+
+    @command.setter
+    def command(self, value):
+        self.executor.command.value = value
+
+    @property
+    def docker(self):
+        return self.executor.container.docker.image
+
+    @docker.setter
+    def docker(self, value):
+        self.executor.container.docker.image = value
 
     def __call__(self):
         fn, args, kwargs = self.data

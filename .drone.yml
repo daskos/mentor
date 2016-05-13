@@ -38,7 +38,7 @@ build:
       - docker build -t lensa/satyr .
 
   test:
-    image: lensa/mesos-python:0.27.0-py2.7-python-2.7
+    image: lensa/satyr
     net: host
     environment:
       - MESOS_MASTER=zk://127.0.0.1:2181/mesos
@@ -56,6 +56,7 @@ publish:
       - sdist
     when:
       event: [tag]
+
   docker:
     username: $$DOCKERHUB_USERNAME
     password: $$DOCKERHUB_PASSWORD
@@ -67,3 +68,14 @@ publish:
       - latest
     when:
       event: [tag]
+
+  docker:
+    username: $$DOCKERHUB_USERNAME
+    password: $$DOCKERHUB_PASSWORD
+    email: $$DOCKERHUB_EMAIL
+    repo: lensa/satyr
+    file: Dockerfile
+    tag:
+      - master
+    when:
+      branch: master

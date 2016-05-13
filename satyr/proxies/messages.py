@@ -14,7 +14,8 @@ class Map(dict):
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
-            self[k] = v
+            setattr(self, k, v)
+            # self[k] = v
 
     @classmethod
     def cast(cls, v):
@@ -72,6 +73,10 @@ class RegisterProxies(type):
 class MessageProxy(Map):
     __metaclass__ = RegisterProxies
     proto = Message
+
+
+class Environment(MessageProxy):
+    proto = mesos_pb2.Environment
 
 
 class Scalar(MessageProxy):
@@ -277,6 +282,20 @@ class FrameworkInfo(MessageProxy):
 class ExecutorInfo(MessageProxy):
     proto = mesos_pb2.ExecutorInfo
 
+    def __init__(self, id=None, **kwargs):
+        super(ExecutorInfo, self).__init__(**kwargs)
+        self.id = id or str(uuid4())
+
+    @property
+    def id(self):  # more consistent naming
+        return self['executor_id']
+
+    @id.setter
+    def id(self, value):
+        if not isinstance(value, ExecutorID):
+            value = ExecutorID(value=value)
+        self['executor_id'] = value
+
 
 class MasterInfo(MessageProxy):
     proto = mesos_pb2.MasterInfo
@@ -292,6 +311,16 @@ class Filters(MessageProxy):
 
 class TaskStatus(MessageProxy):
     proto = mesos_pb2.TaskStatus
+
+    @property
+    def task_id(self):  # more consistent naming
+        return self['task_id']
+
+    @task_id.setter
+    def task_id(self, value):
+        if not isinstance(value, TaskID):
+            value = TaskID(value=value)
+        self['task_id'] = value
 
     def is_staging(self):
         return self.state == 'TASK_STAGING'
@@ -322,18 +351,20 @@ class TaskInfo(ResourcesMixin, MessageProxy):
 
     def __init__(self, id=None, **kwargs):
         super(TaskInfo, self).__init__(**kwargs)
-        self.id = id or TaskID(value=str(uuid4()))
+        self.id = id or str(uuid4())
 
     @property
     def id(self):  # more consistent naming
-        return self.task_id
+        return self['task_id']
 
     @id.setter
     def id(self, value):
-        self.task_id = value
+        if not isinstance(value, TaskID):
+            value = TaskID(value=value)
+        self['task_id'] = value
 
     def status(self, state, **kwargs):  # used on executor side
-        return TaskStatus(task_id=self.task_id, state=state, **kwargs)
+        return TaskStatus(task_id=self.id, state=state, **kwargs)
 
 
 class CommandInfo(MessageProxy):

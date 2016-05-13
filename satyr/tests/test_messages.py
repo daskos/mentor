@@ -35,18 +35,15 @@ def test_python_task_status_encode():
     data = {'arbitrary': 'data', 'value': 5}
     dumped = cloudpickle.dumps(data)
 
-    status = PythonTaskStatus(task_id={'value': 'test-id'},
-                              state='TASK_STAGING',
+    status = PythonTaskStatus(task_id='test-id', state='TASK_STAGING',
                               data=data)
-
     proto = encode(status)
     assert isinstance(proto, mesos_pb2.TaskStatus)
     assert proto.data == dumped
     assert proto.task_id.value == 'test-id'
     assert proto.state == mesos_pb2.TASK_STAGING
 
-    status = PythonTaskStatus(task_id={'value': 'test-id'},
-                              state='TASK_RUNNING')
+    status = PythonTaskStatus(task_id='test-id', state='TASK_RUNNING')
     status.data = data
     proto = encode(status)
     assert isinstance(proto, mesos_pb2.TaskStatus)
@@ -87,12 +84,17 @@ def test_python_task_encode():
     dumped = cloudpickle.dumps(data)
 
     task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                      id={'value': 'test-id'})
+                      id='test-id',
+                      envs={'TEST': 'value'},
+                      uris=['test_dependency'])
 
     proto = encode(task)
     assert isinstance(proto, mesos_pb2.TaskInfo)
     assert proto.data == dumped
     assert proto.task_id.value == 'test-id'
+    assert proto.executor.command.uris[0].value == 'test_dependency'
+    assert proto.executor.command.environment.variables[0].name == 'TEST'
+    assert proto.executor.command.environment.variables[0].value == 'value'
 
     task = PythonTask(id=TaskID(value='test-id'))
     task.data = data
@@ -105,35 +107,13 @@ def test_python_task_encode():
 def test_python_task_execution():
     fn, args, kwargs = sum, [range(5)], {}
     task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                      id={'value': 'test-id'})
+                      id='test-id')
     task = decode(encode(task))
     assert task() == 10
 
     def fn(lst1, lst2):
         return sum(lst1) - sum(lst2)
     args = [range(5), range(3)]
-    task = PythonTask(fn=fn, args=args, id={'value': 'test-id'})
+    task = PythonTask(fn=fn, args=args, id='test-id')
     task = decode(encode(task))
     assert task() == 7
-
-
-# def test_python_task_callbacks(mocker):
-#     fn, args, kwargs = sum, [range(5)], {}
-
-#     on_update = mocker.MagicMock()
-#     on_success = mocker.MagicMock()
-#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'},
-#                       on_update=on_update, on_success=on_success)
-#     status = PythonTaskStatus(state='TASK_FINISHED', data=20)
-#     task.update(status)
-#     on_update.assert_called_with(task, status)
-#     on_success.assert_called_with(task, status)
-
-#     on_update = mocker.MagicMock()
-#     on_fail = mocker.MagicMock()
-#     task = PythonTask(fn=fn, args=args, kwargs=kwargs, id={'value': 'test-id'},
-#                       on_update=on_update, on_fail=on_fail)
-#     status = PythonTaskStatus(state='TASK_KILLED')
-#     task.update(status)
-#     on_update.assert_called_with(task, status)
-#     on_fail.assert_called_with(task, status)

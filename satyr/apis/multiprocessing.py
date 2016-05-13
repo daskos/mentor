@@ -81,7 +81,7 @@ class Pool(Running):
 
     def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
         # TODO: callback
-        task = PythonTask(name='multiprocessing-task',
+        task = PythonTask(name=kwargs.pop('name', 'multiprocessing'),
                           fn=func, args=args, kwargs=kwds, **kwargs)
 
         return self.scheduler.submit(task)

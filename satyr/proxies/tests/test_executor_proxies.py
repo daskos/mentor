@@ -37,7 +37,7 @@ def test_executor_driver_callbacks(mocker):
     proxy.start()
     proxy.stop()
     proxy.run()
-    proxy.update(TaskStatus())
+    proxy.update(TaskStatus(task_id='test', state='TASK_RUNNING'))
     proxy.message('message')
 
     driver.abort.assert_called_once()

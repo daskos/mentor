@@ -71,13 +71,16 @@ def test_apply():
 
 
 def test_multiple_apply_async(resources):
+    def fn(a, b):
+        return a + b
+
     with Pool(name='test-pool') as pool:
-        results = [pool.apply_async(lambda a, b: a + b, [1, i],
+        results = [pool.apply_async(fn, [1, i],
                                     resources=resources)
-                   for i in range(5)]
+                   for i in range(10)]
         values = [res.get(timeout=20) for res in results]
 
-    assert values == [i + 1 for i in range(5)]
+    assert values == [i + 1 for i in range(10)]
 
 
 def test_queue_apply_async(zk, resources):

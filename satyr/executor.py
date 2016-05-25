@@ -20,11 +20,11 @@ class Running(object):
         self.driver = MesosExecutorDriver(executor)
 
         def shutdown(signal, frame):
-            self.driver.stop()
+            self.stop()
 
         signal.signal(signal.SIGINT, shutdown)
         signal.signal(signal.SIGTERM, shutdown)
-        atexit.register(self.driver.stop)
+        atexit.register(self.stop)
 
     def run(self):
         return self.driver.run()
@@ -35,23 +35,20 @@ class Running(object):
         return status
 
     def stop(self):
-        logging.info("Stopping Mesos driver")
-        self.driver.stop()
-        logging.info("Joining Mesos driver")
-        result = self.driver.join()
-        logging.info("Joined Mesos driver")
-        if result != mesos_pb2.DRIVER_STOPPED:
-            raise RuntimeError("Mesos driver failed with %i", result)
+        return self.driver.stop()
 
     def join(self):
-        self.driver.join()
+        return self.driver.join()
 
     def __enter__(self):
         self.start()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
+        self.join()
+        if exc_type:
+            raise exc_type, exc_value, traceback
 
 
 class OneOffExecutor(Executor):
@@ -73,11 +70,18 @@ class OneOffExecutor(Executor):
             else:
                 driver.update(task.status('TASK_FINISHED', data=result))
                 logging.info('Sent TASK_FINISHED status update')
+            finally:
+                # stopper = threading.Timer(1.0, driver.stop)
+                # stopper.start()
+                driver.stop()
 
         thread = threading.Thread(target=run_task)
         thread.start()
 
     def on_kill(self, driver, task_id):
+        driver.stop()
+
+    def on_shutdown(self, driver):
         driver.stop()
 
 

@@ -35,12 +35,12 @@ class ExecutorProxy(Executor):
         return self.executor.on_disconnected(ExecutorDriverProxy(driver))
 
     def launchTask(self, driver, taskInfo):
-        logging.info('Launches task', extra=dict())
+        logging.info('Launch task received')
         return self.executor.on_launch(ExecutorDriverProxy(driver),
                                        decode(taskInfo))
 
     def killTask(self, driver, taskId):
-        logging.info('Kills task', extra=dict())
+        logging.info('Kills task received')
         return self.executor.on_kill(ExecutorDriverProxy(driver),
                                      decode(taskId))
 
@@ -50,7 +50,7 @@ class ExecutorProxy(Executor):
                                         message)
 
     def shutdown(self, driver):
-        logging.info('Executor shutdown')
+        logging.info('Executor shutdown received')
         return self.executor.on_shutdown(ExecutorDriverProxy(driver))
 
     def error(self, driver, message):
@@ -114,7 +114,8 @@ class ExecutorDriverProxy(object):
         See Scheduler.statusUpdate for more information about status update
         acknowledgements.
         """
-        logging.info('Executor sends status update')
+        logging.info('Executor sends status update {} for task {}'.format(
+                     status.state, status.task_id))
         return self.driver.sendStatusUpdate(encode(status))
 
     def message(self, data):
@@ -123,5 +124,5 @@ class ExecutorDriverProxy(object):
         These messages are best effort; do not expect a framework message to be
         retransmitted in any reliable fashion.
         """
-        logging.info('Driver sends framework message')
+        logging.info('Driver sends framework message {}'.format(data))
         return self.driver.sendFrameworkMessage(data)

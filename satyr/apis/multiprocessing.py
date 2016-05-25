@@ -62,9 +62,6 @@ class Pool(Running):
     def terminate(self):
         self.stop()
 
-    def join(self):
-        self.join()
-
     def wait(self, seconds=-1):
         self.scheduler.wait(seconds)
 

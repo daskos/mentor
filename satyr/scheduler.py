@@ -27,10 +27,11 @@ class Running(object):
                                            master, implicit_acknowledge)
 
         def shutdown(signal, frame):
-            self.driver.stop()
+            self.stop()
+
         signal.signal(signal.SIGINT, shutdown)
         signal.signal(signal.SIGTERM, shutdown)
-        atexit.register(self.driver.stop)
+        atexit.register(self.stop)
 
     def run(self):
         return self.driver.run()
@@ -41,13 +42,7 @@ class Running(object):
         return status
 
     def stop(self):
-        logging.info("Stopping Mesos driver")
-        self.driver.stop()
-        logging.info("Joining Mesos driver")
-        result = self.driver.join()
-        logging.info("Joined Mesos driver")
-        if result != mesos_pb2.DRIVER_STOPPED:
-            raise RuntimeError("Mesos driver failed with %i", result)
+        return self.driver.stop()
 
     def join(self):
         return self.driver.join()
@@ -56,8 +51,11 @@ class Running(object):
         self.start()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback):
         self.stop()
+        self.join()
+        if exc_type:
+            raise exc_type, exc_value, traceback
 
 
 class AsyncResult(object):
@@ -135,8 +133,6 @@ class QueueScheduler(Scheduler):
                     self.statuses[task.id] = task.status('TASK_STARTING')
 
                 # running with empty task list will decline the offer
-                logging.info('launched tasks: {}'.format(
-                    ', '.join(map(str, tasks))))
                 driver.launch(offer.id, tasks)
 
                 self.report()
@@ -159,6 +155,13 @@ class QueueScheduler(Scheduler):
             del self.tasks[task.id]
             del self.results[task.id]
             del self.statuses[task.id]
+
+            if status.has_failed():
+                logging.error('Aborting because task {} is in unexpected state '
+                              '{} with message {}'.format(status.task_id,
+                                                          status.state,
+                                                          status.message))
+                driver.abort()
 
         task.update(status)
 

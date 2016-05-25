@@ -1,7 +1,7 @@
 from mesos.interface import mesos_pb2
 from satyr.proxies import SchedulerDriverProxy, SchedulerProxy
-from satyr.proxies.messages import (ExecutorID, OfferID, Operation, Request,
-                                    SlaveID, TaskInfo, TaskStatus)
+from satyr.proxies.messages import (Cpus, ExecutorID, Mem, OfferID, Operation,
+                                    Request, SlaveID, TaskInfo, TaskStatus)
 
 
 def test_scheduler_event_handlers(mocker):
@@ -45,7 +45,8 @@ def test_scheduler_driver_callbacks(mocker):
     proxy.acknowledge(TaskStatus())
     proxy.decline(OfferID())
     proxy.kill(OfferID())
-    proxy.launch(OfferID(), [TaskInfo()])
+    proxy.launch(OfferID(resources=[Cpus(1), Mem(128)]),
+                 [TaskInfo(resources=[Cpus(1), Mem(128)])])
     proxy.message(ExecutorID(), SlaveID(), 'message')
     proxy.reconcile([TaskStatus()])
     proxy.request([Request()])

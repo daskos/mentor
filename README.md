@@ -1,4 +1,5 @@
 [![Build Status](http://drone.lensa.com:8000/api/badges/lensacom/satyr/status.svg)](http://drone.lensa.com:8000/lensacom/satyr)
+[![Join the chat at https://gitter.im/lensacom/satyr](https://badges.gitter.im/lensacom/satyr.svg)](https://gitter.im/lensacom/satyr?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ![satyr](https://s3.amazonaws.com/lensa-rnd-misc/satyr2.png)
 

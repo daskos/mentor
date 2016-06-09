@@ -56,9 +56,12 @@ def test_task_callbacks(mocker, python_task, offers):
     sched.submit(python_task)
     sched.on_offers(driver, offers)
 
-    sched.on_update(driver, python_task.status('TASK_RUNNING'))
-    sched.on_update(driver, python_task.status('TASK_FINISHED',
-                                               data=python_task()))
+    status = PythonTaskStatus(task_id=python_task.id, state='TASK_RUNNING')
+    sched.on_update(driver, status)
+
+    status = PythonTaskStatus(task_id=python_task.id, state='TASK_FINISHED',
+                              data=python_task())
+    sched.on_update(driver, status)
 
     update_calls = python_task.on_update.call_args_list
     success_calls = python_task.on_success.call_args_list
@@ -81,13 +84,18 @@ def test_task_result(mocker, python_task, offers):
     driver = mocker.Mock()
     sched = QueueScheduler(name='test-scheduler')
 
-    result = sched.submit(python_task)
+    sched.submit(python_task)
     sched.on_offers(driver, offers)
-    sched.on_update(driver, python_task.status('TASK_RUNNING'))
-    sched.on_update(driver, python_task.status('TASK_FINISHED',
-                                               data=python_task()))
 
-    assert result.get() == 10
+    status = PythonTaskStatus(task_id=python_task.id, state='TASK_RUNNING')
+    sched.on_update(driver, status)
+
+    status = PythonTaskStatus(task_id=python_task.id, state='TASK_FINISHED',
+                              data=python_task())
+    sched.on_update(driver, status)
+
+    assert python_task.status.state == 'TASK_FINISHED'
+    assert python_task.status.data == 10
 
 
 # integration test

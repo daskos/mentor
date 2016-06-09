@@ -5,11 +5,13 @@ import logging
 import signal
 import sys
 import threading
+from functools import partial
 
 from mesos.interface import mesos_pb2
 from mesos.native import MesosExecutorDriver
 
 from .interface import Executor
+from .messages import PythonTaskStatus
 from .proxies import ExecutorProxy
 
 
@@ -54,8 +56,10 @@ class Running(object):
 class OneOffExecutor(Executor):
 
     def on_launch(self, driver, task):
+        status = partial(PythonTaskStatus, task_id=task.id)
+
         def run_task():
-            driver.update(task.status('TASK_RUNNING'))
+            driver.update(status(state='TASK_RUNNING'))
             logging.info('Sent TASK_RUNNING status update')
 
             try:
@@ -63,12 +67,11 @@ class OneOffExecutor(Executor):
                 result = task()
             except Exception as e:
                 logging.exception('Task errored')
-                driver.update(task.status('TASK_FAILED',
-                                          data=e,
-                                          message=e.message))
+                driver.update(status(state='TASK_FAILED',
+                                     data=e, message=e.message))
                 logging.info('Sent TASK_RUNNING status update')
             else:
-                driver.update(task.status('TASK_FINISHED', data=result))
+                driver.update(status(state='TASK_FINISHED', data=result))
                 logging.info('Sent TASK_FINISHED status update')
             finally:
                 # stopper = threading.Timer(1.0, driver.stop)

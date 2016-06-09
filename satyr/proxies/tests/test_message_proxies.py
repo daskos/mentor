@@ -359,6 +359,21 @@ def test_resources_mixin_inplace_subtraction():
     assert o.disk == 64
 
 
+def test_status_in_task_info():
+    t = TaskInfo(name='test-task',
+                 id=TaskID(value='test-task-id'),
+                 resources=[Cpus(0.1), Mem(16)],
+                 command=CommandInfo(value='echo 100'))
+
+    assert isinstance(t.status, TaskStatus)
+    assert t.status.state == 'TASK_STAGING'
+
+    p = encode(t)
+    assert isinstance(p, mesos_pb2.TaskInfo)
+    with pytest.raises(AttributeError):
+        p.status
+
+
 def test_encode_task_info():
     t = TaskInfo(name='test-task',
                  id=TaskID(value='test-task-id'),

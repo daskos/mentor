@@ -58,40 +58,16 @@ class Running(object):
             raise exc_type, exc_value, traceback
 
 
-class AsyncResult(object):
-
-    def __init__(self):
-        self.success = None
-        self.value = None
-
-    def get(self, timeout=60):
-        self.wait(timeout)
-        if self.successful():
-            return self.value
-        else:
-            try:
-                raise self.value
-            except TypeError:
-                raise ValueError('Async result indicate task failed!')
-
-    def wait(self, seconds=60):
-        with timeout(seconds):
-            while not self.ready():
-                time.sleep(0.1)
-
-    def ready(self):
-        return self.success is not None
-
-    def successful(self):
-        return self.success is True
-
-
 class QueueScheduler(Scheduler):
 
+    # todo remove statuses or replace as a property wich plucks status from
+    # tasks
     def __init__(self, *args, **kwargs):
         self.tasks = {}    # holding task_id => (task, status, result) pairs
-        self.results = {}
-        self.statuses = {}
+
+    @property
+    def statuses(self):
+        return {task_id: task.status for task_id, task in self.tasks.items()}
 
     def is_idle(self):
         return not len(self.tasks)
@@ -111,9 +87,6 @@ class QueueScheduler(Scheduler):
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
         self.tasks[task.id] = task
-        self.statuses[task.id] = task.status('TASK_STAGING')
-        self.results[task.id] = AsyncResult()
-        return self.results[task.id]
 
     def on_offers(self, driver, offers):
         logging.info('Received offers: {}'.format(sum(offers)))
@@ -122,7 +95,6 @@ class QueueScheduler(Scheduler):
         # maybe limit to the first n tasks
         staging = [self.tasks[status.task_id]
                    for status in self.statuses.values() if status.is_staging()]
-
         # best-fit-decreasing binpacking
         bins, skip = bfd(staging, offers, cpus=1, mem=1)
 
@@ -130,32 +102,18 @@ class QueueScheduler(Scheduler):
             try:
                 for task in tasks:
                     task.slave_id = offer.slave_id
-                    self.statuses[task.id] = task.status('TASK_STARTING')
-
+                    task.status.state = 'TASK_STARTING'
                 # running with empty task list will decline the offer
                 driver.launch(offer.id, tasks)
-
-                self.report()
             except Exception:
                 logging.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
-        self.statuses[status.task_id] = status
         task = self.tasks[status.task_id]
-
-        logging.info('Updated task {} state {}'.format(
-            status.task_id, status.state))
-        self.report()
-
+        logging.info('Updated task {} state {}'.format(status.task_id,
+                                                       status.state))
         if status.has_terminated():
-            result = self.results[task.id]
-            result.success = status.has_succeeded()
-            result.value = status.data
-
             del self.tasks[task.id]
-            del self.results[task.id]
-            del self.statuses[task.id]
-
             if status.has_failed():
                 logging.error('Aborting because task {} is in unexpected state '
                               '{} with message {}'.format(status.task_id,
@@ -164,6 +122,7 @@ class QueueScheduler(Scheduler):
                 driver.abort()
 
         task.update(status)
+        self.report()
 
 
 if __name__ == '__main__':

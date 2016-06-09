@@ -117,3 +117,21 @@ def test_python_task_execution():
     task = PythonTask(fn=fn, args=args, id='test-id')
     task = decode(encode(task))
     assert task() == 7
+
+
+def test_python_task_contains_status():
+    fn, args, kwargs = sum, [range(5)], {}
+
+    task = PythonTask(fn=fn, args=args, kwargs=kwargs,
+                      id='test-id',
+                      envs={'TEST': 'value'},
+                      uris=['test_dependency'])
+
+    assert isinstance(task.status, PythonTaskStatus)
+    assert task.status.state == 'TASK_STAGING'
+
+    new_status = PythonTaskStatus(task_id=task.id, state='TASK_RUNNING')
+    task.update(new_status)
+
+    assert isinstance(task.status, PythonTaskStatus)
+    assert task.status.state == 'TASK_RUNNING'

@@ -6,7 +6,7 @@ from os.path import exists
 from setuptools import setup
 
 setup(name='satyr',
-      version='0.1.4',
+      version='0.2.0',
       description='Extensible Python Framework for Apache Mesos',
       url='http://github.com/lensacom/satyr',
       maintainer='Krisztián Szűcs',
@@ -16,7 +16,7 @@ setup(name='satyr',
       packages=['satyr', 'satyr.proxies', 'satyr.apis'],
       long_description=(open('README.md').read() if exists('README.md')
                         else ''),
-      install_requires=['cloudpickle', 'kazoo'],
+      install_requires=['cloudpickle', 'kazoo', 'futures'],
       extras_require={'mesos': ['mesos.native']},
       setup_requires=['pytest-runner'],
       tests_require=['pytest-mock', 'pytest'],

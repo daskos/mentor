@@ -42,6 +42,8 @@ class PythonTask(PickleMixin, TaskInfo):
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  command='python -m satyr.executor', envs={}, uris=[],
                  docker='lensa/satyr:latest', **kwds):
+        super(PythonTask, self).__init__(**kwds)
+        self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
         self.executor = ExecutorInfo(
             container=ContainerInfo(type='DOCKER', docker=DockerInfo(
                 force_pull_image=False, network='HOST')),
@@ -52,7 +54,6 @@ class PythonTask(PickleMixin, TaskInfo):
         self.docker = docker
         self.command = command
         self.resources = resources
-        super(PythonTask, self).__init__(**kwds)
 
     @property
     def uris(self):
@@ -92,23 +93,22 @@ class PythonTask(PickleMixin, TaskInfo):
         fn, args, kwargs = self.data
         return fn(*args, **kwargs)
 
-    def status(self, state, **kwargs):
-        return PythonTaskStatus(task_id=self.task_id, state=state, **kwargs)
-
     def update(self, status):
+        assert isinstance(status, PythonTaskStatus)
         self.on_update(status)
-
         if status.has_succeeded():
             self.on_success(status)
         elif status.has_failed():
             self.on_fail(status)
 
     def on_update(self, status):
-        pass
+        self.status = status
+        logging.info('Task {} has been updated with state {}'.format(
+            self.id.value, status.state))
 
     def on_success(self, status):
         logging.info('Task {} has been succeded'.format(self.id.value))
 
     def on_fail(self, status):
-        logging.info('Task {} has been failed due to {}'.format(self.id.value,
-                                                                status.message))
+        logging.info('Task {} has been failed due to {}'.format(
+            self.id.value, status.message))

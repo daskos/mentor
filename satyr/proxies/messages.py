@@ -331,8 +331,14 @@ class TaskStatus(MessageProxy):
     def is_running(self):
         return self.state == 'TASK_RUNNING'
 
+    def has_finished(self):
+        return self.state == 'TASK_FINISHED'
+
     def has_succeeded(self):
         return self.state == 'TASK_FINISHED'
+
+    def has_killed(self):
+        return self.state == 'TASK_KILLED'
 
     def has_failed(self):
         return self.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED',
@@ -352,6 +358,7 @@ class TaskInfo(ResourcesMixin, MessageProxy):
     def __init__(self, id=None, **kwargs):
         super(TaskInfo, self).__init__(**kwargs)
         self.id = id or str(uuid4())
+        self.status = TaskStatus(task_id=self.id, state='TASK_STAGING')
 
     @property
     def id(self):  # more consistent naming
@@ -362,9 +369,6 @@ class TaskInfo(ResourcesMixin, MessageProxy):
         if not isinstance(value, TaskID):
             value = TaskID(value=value)
         self['task_id'] = value
-
-    def status(self, state, **kwargs):  # used on executor side
-        return TaskStatus(task_id=self.id, state=state, **kwargs)
 
 
 class CommandInfo(MessageProxy):

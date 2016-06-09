@@ -1,3 +1,8 @@
+from __future__ import absolute_import, division, print_function
+
+import threading
+from Queue import Empty
+
 import cloudpickle as cp
 import pytest
 from satyr.queue import LockingQueue, Queue
@@ -40,3 +45,29 @@ def test_locking_queue_serde(zk):
     unpickled_queue.consume()
     assert cp.loads(unpickled_queue.get()) == {'c': 3}
     unpickled_queue.consume()
+
+
+def test_queue_size(zk):
+    queue = Queue(zk, '/satyr/size')
+    assert queue.empty()
+    assert queue.qsize() == 0
+
+    queue.put(cp.dumps(range(5)))
+    assert queue.empty() is False
+    assert queue.qsize() == 1
+
+
+def test_queue_blocking_get(zk):
+    queue = Queue(zk, '/satyr/blocking')
+
+    def delayed_put():
+        import time
+        time.sleep(2)
+        queue.put(cp.dumps(range(5)))
+
+    t = threading.Thread(target=delayed_put)
+    t.start()
+    with pytest.raises(Empty):
+        queue.get(block=True, timeout=1)
+
+    assert queue.get(block=True, timeout=2) == cp.dumps(range(5))

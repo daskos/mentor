@@ -65,10 +65,9 @@ def test_failed_status_updates(mocker):
     assert status.message == 'Booom!'
 
 
-# integration test
-# def test_runner_context_manager():
-#     executor = OneOffExecutor()
-#     with Running(executor):
-#         pass
+def test_runner_context_manager():
+    executor = OneOffExecutor()
+    with Running(executor):
+        pass
 
-#     assert executor
+    assert executor

@@ -108,46 +108,51 @@ def test_docker_python_exception():
                       resources=[Cpus(0.1), Mem(64), Disk(0)])
 
     with Running(sched, name='test-scheduler'):
-        result = sched.submit(task)
-        with pytest.raises(Exception) as e:
-            result.get()
-        assert e.value.message == 'Dummy exception on executor side!'
+        sched.submit(task)
+        sched.wait()
+        assert task.status.has_failed()
+        assert isinstance(task.status.data, Exception)
+        assert task.status.data.message == 'Dummy exception on executor side!'
 
 
-def test_multiple_submissions(mocker, docker_python):
+def test_parallel_execution(mocker, docker_python):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
     with Running(sched, name='test-scheduler'):
-        results = [None] * 3
+        tasks = []
         for i in range(3):
             task = PythonTask(id=TaskID(value='test-python-task-{}'.format(i)),
                               fn=sum, args=[[1, 10, i]],
                               name='test-python-task-name',
                               resources=[Cpus(0.1), Mem(64), Disk(0)])
-            results[i] = sched.submit(task)
+            sched.submit(task)
+            tasks.append(task)
         sched.wait()  # block until all tasks finishes
 
-    assert [r.get() for r in results] == [11, 12, 13]
+    assert [t.status.data for t in tasks] == [11, 12, 13]
 
 
-def test_sequential_submit_get(mocker, docker_python):
+def test_sequential_execution(mocker, docker_python):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
     with Running(sched, name='test-scheduler'):
+        tasks = []
         for i in range(3):
             task = PythonTask(id=TaskID(value='test-python-task-{}'.format(i)),
                               fn=sum, args=[[1, 10, i]],
                               name='test-python-task-name',
                               resources=[Cpus(0.1), Mem(64), Disk(0)])
-            result = sched.submit(task)
-            assert result.get(timeout=10) == 11 + i
+            sched.submit(task)
+            tasks.append(task)
+            sched.wait()
+            assert task.status.data == 11 + i
 
 
 def test_docker_python_result(mocker, docker_python):
     sched = QueueScheduler()
     with Running(sched, name='test-scheduler'):
-        result = sched.submit(docker_python)
+        sched.submit(docker_python)
         sched.wait()  # block until all tasks finishes
-        assert result.get() == 10
+        assert docker_python.status.data == 10

@@ -23,8 +23,8 @@ def test_submit():
         assert isinstance(future1, Future)
         assert isinstance(future2, Future)
 
-        assert future1.result(timeout=3) == 3
-        assert future2.result(timeout=3) == 15
+        assert future1.result(timeout=5) == 3
+        assert future2.result(timeout=5) == 15
 
 
 def test_future_states():
@@ -34,10 +34,9 @@ def test_future_states():
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(add, [1, 2])
-        with timeout(3):
-            assert future.done() is False
+        with timeout(5):
             while future.running():
-                time.sleep(0.01)
+                time.sleep(0.1)
             assert future.running() is False
             assert future.done() is True
             assert future.result() == 3
@@ -57,7 +56,7 @@ def test_future_raises_exception():
     with MesosPoolExecutor(name='futures-pool') as executor:
         with pytest.raises(Exception) as e:
             future1 = executor.submit(raiser)
-            future1.result(timeout=3)
+            future1.result(timeout=5)
             assert e.value.message == 'Boooom!'
 
 
@@ -67,7 +66,7 @@ def test_future_catches_exception():
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(raiser)
-        e = future.exception(timeout=3)
+        e = future.exception(timeout=5)
         assert isinstance(e, Exception)
         assert e.message == 'Boooom!'
 
@@ -82,17 +81,6 @@ def test_multiple_submit(resources):
         values = [f.result(timeout=5) for f in futures]
 
     assert values == [i + 1 for i in range(10)]
-
-
-# def test_map_async(resources):
-#     with Pool(name='test-pool') as pool:
-#         results = pool.map_async(
-#             lambda tpl: tpl[0] + tpl[1], zip(range(5), range(5)),
-#             resources=resources)
-#         assert all([isinstance(res, AsyncResult) for res in results])
-#         values = [res.get(timeout=30) for res in results]
-
-#     assert values == [i + i for i in range(5)]
 
 
 def test_map(resources):

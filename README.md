@@ -33,9 +33,31 @@ Configuration:
 
 ## Examples
 
+### Futures Interface
+
+It's almost identical to python's
+[futures interface](https://docs.python.org/3/library/concurrent.futures.html)
+but runs processes on a Mesos cluster (concurrently).
+
+```python
+from satyr.apis.futures import MesosPoolExecutor
+from satyr.proxies.messages import Cpus, Mem
+
+with MesosPoolExecutor(name='futures-pool') as executor:
+    def mul(a, b):
+        return a * b
+
+    future = executor.submit(mul, args=[3, 5])
+    assert future.result(timeout=5) == 3
+
+    it = executor.map(mul, range(10), range(10), timeout=5,
+                      resources=[Cpus(0.1), Mem(128)])
+    assert list(it) == [i**2 for i in range(10)]
+```
+
 ### Multiprocessing
 
-This is the most simple use case. It's similar to python's
+It's similar to python's
 [multiprocessing interface](https://docs.python.org/2/library/multiprocessing.html)
 but runs processes on a Mesos cluster (concurrently).
 

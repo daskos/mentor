@@ -50,10 +50,10 @@ build:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
-      - docker build -t lensa/satyr .
+      - docker build -t lensa/satyr:latest .
 
   test:
-    image: lensa/satyr
+    image: lensa/satyr:latest
     net: host
     environment:
       - MESOS_MASTER=zk://127.0.0.1:2181/mesos

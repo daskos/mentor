@@ -112,6 +112,8 @@ class QueueScheduler(Scheduler):
         task = self.tasks[status.task_id]
         logging.info('Updated task {} state {}'.format(status.task_id,
                                                        status.state))
+        task.update(status)
+
         if status.has_terminated():
             del self.tasks[task.id]
             if status.has_failed():
@@ -121,7 +123,6 @@ class QueueScheduler(Scheduler):
                                                           status.message))
                 driver.abort()
 
-        task.update(status)
         self.report()
 
 

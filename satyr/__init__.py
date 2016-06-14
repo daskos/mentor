@@ -7,9 +7,7 @@ from .scheduler import QueueScheduler
 from .executor import OneOffExecutor
 from .messages import PythonTask, PythonTaskStatus  # important to register classes
 
-
-logging.basicConfig(level=logging.INFO,
-                    format='%(relativeCreated)6d %(threadName)s %(message)s')
+logging.basicConfig(format='%(relativeCreated)6d %(threadName)s %(message)s')
 
 __version__ = _pkg_resources.get_distribution('satyr').version
 

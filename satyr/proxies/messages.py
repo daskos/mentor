@@ -95,7 +95,7 @@ class ScalarResource(Resource):
     def __init__(self, value=None, **kwargs):
         super(Resource, self).__init__(**kwargs)
         if value is not None:
-            self.scalar = Scalar(value=value)
+            self.scalar = Scalar(value=float(value))
 
     def __cmp__(self, other):
         first, second = float(self), float(other)

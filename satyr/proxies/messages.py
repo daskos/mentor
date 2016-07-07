@@ -36,7 +36,7 @@ class Map(dict):
         prop = getattr(self.__class__, k, None)
         if isinstance(prop, property):  # property binding
             prop.fset(self, v)
-        elif callable(v):  # method binding
+        elif hasattr(v, '__call__'):  # method binding
             self.__dict__[k] = v
         else:
             self[k] = v

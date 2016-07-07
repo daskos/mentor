@@ -176,3 +176,19 @@ def test_conditional_container_mapping(m):
 
     assert isinstance(d, falsedict)
     assert isinstance(p, MessageOfTypes)
+
+
+def test_reverse_type_conversion(m):
+    class String(object):
+
+        def __init__(self, value):
+            self.value = value
+
+        def __str__(self):
+            return self.value
+
+    d = protobuf_to_dict(m)
+    d['strng'] = String('string')
+    m2 = dict_to_protobuf(d, MessageOfTypes)
+
+    assert m == m2

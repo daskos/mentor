@@ -12,7 +12,7 @@ __all__ = ["protobuf_to_dict", "TYPE_CALLABLE_MAP", "dict_to_protobuf",
            "REVERSE_TYPE_CALLABLE_MAP"]
 
 
-TYPE_CALLABLE_MAP = {
+REVERSE_TYPE_CALLABLE_MAP = {
     FieldDescriptor.TYPE_DOUBLE: float,
     FieldDescriptor.TYPE_FLOAT: float,
     FieldDescriptor.TYPE_INT32: int,
@@ -27,14 +27,10 @@ TYPE_CALLABLE_MAP = {
     FieldDescriptor.TYPE_SFIXED64: int if six.PY3 else six.integer_types[1],
     FieldDescriptor.TYPE_BOOL: bool,
     FieldDescriptor.TYPE_STRING: six.text_type,
-    FieldDescriptor.TYPE_BYTES: str,  # base64.b64encode,
-    FieldDescriptor.TYPE_ENUM: int
+    FieldDescriptor.TYPE_BYTES: str  # base64.b64encode,
 }
-
-REVERSE_TYPE_CALLABLE_MAP = {
-    # FieldDescriptor.TYPE_BYTES: base64.b64decode
-}
-
+TYPE_CALLABLE_MAP = copy(REVERSE_TYPE_CALLABLE_MAP)
+TYPE_CALLABLE_MAP[FieldDescriptor.TYPE_ENUM] = int
 CONTAINER_MAP = []
 
 

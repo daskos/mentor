@@ -34,7 +34,7 @@ def test_future_states():
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(add, [1, 2])
-        with timeout(5):
+        with timeout(10):
             while future.running():
                 time.sleep(0.1)
             assert future.running() is False
@@ -78,7 +78,7 @@ def test_multiple_submit(resources):
     with MesosPoolExecutor(name='futures-pool') as executor:
         futures = [executor.submit(fn, args=[1, i], resources=resources)
                    for i in range(10)]
-        values = [f.result(timeout=5) for f in futures]
+        values = [f.result(timeout=10) for f in futures]
 
     assert values == [i + 1 for i in range(10)]
 

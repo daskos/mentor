@@ -79,7 +79,7 @@ class PythonTask(PickleMixin, TaskInfo):
 
     @command.setter
     def command(self, value):
-        self.executor.command.value = str(value)
+        self.executor.command.value = value
 
     @property
     def docker(self):
@@ -87,7 +87,7 @@ class PythonTask(PickleMixin, TaskInfo):
 
     @docker.setter
     def docker(self, value):
-        self.executor.container.docker.image = str(value)
+        self.executor.container.docker.image = value
 
     def __call__(self):
         fn, args, kwargs = self.data

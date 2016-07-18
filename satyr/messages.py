@@ -41,7 +41,7 @@ class PythonTask(PickleMixin, TaskInfo):
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  command='python -m satyr.executor', envs={}, uris=[],
-                 docker='lensa/satyr:latest', force_pull=True, **kwds):
+                 docker='lensa/satyr:latest', force_pull=False, **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
         self.executor = ExecutorInfo(

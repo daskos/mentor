@@ -23,8 +23,8 @@ def test_submit():
         assert isinstance(future1, Future)
         assert isinstance(future2, Future)
 
-        assert future1.result(timeout=5) == 3
-        assert future2.result(timeout=5) == 15
+        assert future1.result(timeout=10) == 3
+        assert future2.result(timeout=10) == 15
 
 
 def test_future_states():
@@ -34,7 +34,7 @@ def test_future_states():
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(add, [1, 2])
-        with timeout(10):
+        with timeout(15):
             while future.running():
                 time.sleep(0.1)
             assert future.running() is False
@@ -46,7 +46,7 @@ def test_future_timeout():
     with pytest.raises(TimeoutError):
         with MesosPoolExecutor(name='futures-pool') as executor:
             future1 = executor.submit(time.sleep, [3])
-            future1.result(timeout=1)
+            future1.result(timeout=5)
 
 
 def test_future_raises_exception():
@@ -56,7 +56,7 @@ def test_future_raises_exception():
     with MesosPoolExecutor(name='futures-pool') as executor:
         with pytest.raises(Exception) as e:
             future1 = executor.submit(raiser)
-            future1.result(timeout=5)
+            future1.result(timeout=10)
             assert e.value.message == 'Boooom!'
 
 
@@ -66,7 +66,7 @@ def test_future_catches_exception():
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(raiser)
-        e = future.exception(timeout=5)
+        e = future.exception(timeout=10)
         assert isinstance(e, Exception)
         assert e.message == 'Boooom!'
 
@@ -78,7 +78,7 @@ def test_multiple_submit(resources):
     with MesosPoolExecutor(name='futures-pool') as executor:
         futures = [executor.submit(fn, args=[1, i], resources=resources)
                    for i in range(10)]
-        values = [f.result(timeout=10) for f in futures]
+        values = [f.result(timeout=15) for f in futures]
 
     assert values == [i + 1 for i in range(10)]
 

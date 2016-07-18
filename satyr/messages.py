@@ -41,17 +41,18 @@ class PythonTask(PickleMixin, TaskInfo):
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  command='python -m satyr.executor', envs={}, uris=[],
-                 docker='lensa/satyr:latest', **kwds):
+                 docker='lensa/satyr:latest', force_pull=True, **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
         self.executor = ExecutorInfo(
-            container=ContainerInfo(type='DOCKER', docker=DockerInfo(
-                force_pull_image=False, network='HOST')),
+            container=ContainerInfo(type='DOCKER',
+                                    docker=DockerInfo(network='HOST')),
             command=CommandInfo(shell=True))
         self.data = (fn, args, kwargs)
         self.envs = envs
         self.uris = uris
         self.docker = docker
+        self.force_pull = force_pull
         self.command = command
         self.resources = resources
 
@@ -88,6 +89,14 @@ class PythonTask(PickleMixin, TaskInfo):
     @docker.setter
     def docker(self, value):
         self.executor.container.docker.image = value
+
+    @property
+    def force_pull(self):
+        return self.executor.container.docker.force_pull_image
+
+    @force_pull.setter
+    def force_pull(self, value):
+        self.executor.container.docker.force_pull_image = value
 
     def __call__(self):
         fn, args, kwargs = self.data

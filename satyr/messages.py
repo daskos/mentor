@@ -103,6 +103,7 @@ class PythonTask(PickleMixin, TaskInfo):
         return fn(*args, **kwargs)
 
     def update(self, status):
+        logging.warning(status)
         assert isinstance(status, PythonTaskStatus)
         self.on_update(status)
         if status.has_succeeded():

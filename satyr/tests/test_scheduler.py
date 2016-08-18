@@ -102,6 +102,20 @@ def test_task_result(mocker, python_task, offers):
 def test_runner_context_manager():
     sched = QueueScheduler(name='test-scheduler')
     with Running(sched, name='test-scheduler'):
-        sched.wait()
+        pass
 
     assert sched
+
+
+def test_scheduler_retries(mocker):
+    task = PythonTask(id=TaskID(value='oversized-in-memory'), name='test',
+                      fn=lambda: range(int(10e10)), docker='pina/sen',
+                      resources=[Cpus(0.1), Mem(128), Disk(0)])
+    sched = QueueScheduler(name='test-executor-lost', retries=3)
+
+    mocker.spy(sched, 'on_update')
+    with Running(sched, name='test-scheduler') as driver:
+        sched.submit(task)
+        sched.wait()
+
+        # TODO write assertions

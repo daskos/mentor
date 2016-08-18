@@ -21,8 +21,8 @@ class Running(object):
 
     def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
                  implicit_acknowledge=1, *args, **kwargs):
-        scheduler = SchedulerProxy(scheduler)
         framework = FrameworkInfo(name=name, user=user, *args, **kwargs)
+        scheduler = SchedulerProxy(scheduler)
         self.driver = MesosSchedulerDriver(scheduler, encode(framework),
                                            master, implicit_acknowledge)
 
@@ -60,10 +60,9 @@ class Running(object):
 
 class QueueScheduler(Scheduler):
 
-    # todo remove statuses or replace as a property wich plucks status from
-    # tasks
     def __init__(self, *args, **kwargs):
-        self.tasks = {}    # holding task_id => (task, status, result) pairs
+        self.tasks = {}  # holding task_id => task pairs
+        self.healthy = True
 
     @property
     def statuses(self):
@@ -81,7 +80,7 @@ class QueueScheduler(Scheduler):
 
     def wait(self, seconds=-1):
         with timeout(seconds):
-            while not self.is_idle():
+            while self.healthy and not self.is_idle():
                 time.sleep(0.1)
 
     def submit(self, task):  # supports commandtask, pythontask etc.
@@ -110,18 +109,16 @@ class QueueScheduler(Scheduler):
 
     def on_update(self, driver, status):
         task = self.tasks[status.task_id]
-        logging.info('Updated task {} state {}'.format(status.task_id,
-                                                       status.state))
-        task.update(status)
+        logging.info('Updated task {} state to {}'.format(status.task_id,
+                                                          status.state))
+        try:
+            task.update(status)
+        except:
+            self.healthy = False
+            driver.stop()
 
         if status.has_terminated():
             del self.tasks[task.id]
-            if status.has_failed():
-                logging.error('Aborting because task {} is in unexpected state '
-                              '{} with message {}'.format(status.task_id,
-                                                          status.state,
-                                                          status.message))
-                driver.abort()
 
         self.report()
 

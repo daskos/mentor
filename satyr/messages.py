@@ -41,7 +41,8 @@ class PythonTask(PickleMixin, TaskInfo):
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  command='python -m satyr.executor', envs={}, uris=[],
-                 docker='lensa/satyr:latest', force_pull=False, **kwds):
+                 docker='lensa/satyr:latest', force_pull=False, retries=3,
+                 **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
         self.executor = ExecutorInfo(
@@ -55,6 +56,8 @@ class PythonTask(PickleMixin, TaskInfo):
         self.force_pull = force_pull
         self.command = command
         self.resources = resources
+        self.retries = retries
+        self.attempt = 1
 
     @property
     def uris(self):
@@ -103,7 +106,7 @@ class PythonTask(PickleMixin, TaskInfo):
         return fn(*args, **kwargs)
 
     def update(self, status):
-        assert isinstance(status, PythonTaskStatus)
+        assert isinstance(status, TaskStatus)
         self.on_update(status)
         if status.has_succeeded():
             self.on_success(status)
@@ -111,7 +114,7 @@ class PythonTask(PickleMixin, TaskInfo):
             self.on_fail(status)
 
     def on_update(self, status):
-        self.status = status
+        self.status = status  # update task's status
         logging.info('Task {} has been updated with state {}'.format(
             self.id.value, status.state))
 
@@ -119,5 +122,22 @@ class PythonTask(PickleMixin, TaskInfo):
         logging.info('Task {} has been succeded'.format(self.id.value))
 
     def on_fail(self, status):
-        logging.info('Task {} has been failed due to {}'.format(
-            self.id.value, status.message))
+        logging.error('Task {} has been failed with state {} due to {}'.format(
+            self.id.value, status.state, status.message))
+
+        if isinstance(status.data, Exception):  # won't retry due to code error
+            logging.error('Aborting due to task {} failed with state {} and message '
+                          '{}'.format(self.id, status.state, status.message))
+            raise status.data
+        elif self.attempt < self.retries:
+            logging.info('Task {} attempt #{} rescheduled due to failure with state '
+                         '{} and message {}'.format(self.id, self.attempt,
+                                                    status.state, status.message))
+            self.attempt += 1
+            status.state = 'TASK_STAGING'
+        else:
+            logging.error('Aborting due to task {} failed for {} attempts in state '
+                          '{} with message {}'.format(self.id, self.retries,
+                                                      status.state, status.message))
+            raise RuntimeError('Task {} failed with state {} and message {}'.format(
+                self.id, status.state, status.message))

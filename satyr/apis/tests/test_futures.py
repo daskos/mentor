@@ -46,7 +46,7 @@ def test_future_timeout():
     with pytest.raises(TimeoutError):
         with MesosPoolExecutor(name='futures-pool') as executor:
             future1 = executor.submit(time.sleep, [3])
-            future1.result(timeout=5)
+            future1.result(timeout=2)
 
 
 def test_future_raises_exception():

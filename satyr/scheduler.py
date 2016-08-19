@@ -80,8 +80,11 @@ class QueueScheduler(Scheduler):
 
     def wait(self, seconds=-1):
         with timeout(seconds):
-            while self.healthy and not self.is_idle():
-                time.sleep(0.1)
+            try:
+                while self.healthy and not self.is_idle():
+                    time.sleep(0.1)
+            except (KeyboardInterrupt, SystemExit):
+                raise
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
@@ -116,6 +119,7 @@ class QueueScheduler(Scheduler):
         except:
             self.healthy = False
             driver.stop()
+            raise
 
         if status.has_terminated():
             del self.tasks[task.id]

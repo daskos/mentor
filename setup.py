@@ -6,7 +6,7 @@ from os.path import exists
 from setuptools import setup
 
 setup(name='satyr',
-      version='0.2.0',
+      version='0.2.1',
       description='Extensible Python Framework for Apache Mesos',
       url='http://github.com/lensacom/satyr',
       maintainer='Krisztián Szűcs',

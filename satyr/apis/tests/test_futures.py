@@ -7,7 +7,7 @@ from collections import Iterator
 import pytest
 from satyr.apis.futures import Future, MesosPoolExecutor
 from satyr.proxies.messages import Cpus, Disk, Mem
-from satyr.utils import TimeoutError, timeout
+from satyr.utils import RemoteException, TimeoutError, timeout
 
 
 @pytest.fixture
@@ -49,26 +49,26 @@ def test_future_timeout():
             future1.result(timeout=2)
 
 
-def test_future_raises_exception():
+def test_future_raises_exception(resources):
     def raiser():
-        raise Exception('Boooom!')
+        raise ValueError('Boooom!')
 
     with MesosPoolExecutor(name='futures-pool') as executor:
-        with pytest.raises(Exception) as e:
-            future1 = executor.submit(raiser)
+        with pytest.raises(RemoteException) as e:
+            future1 = executor.submit(raiser, resources=resources)
             future1.result(timeout=10)
-            assert e.value.message == 'Boooom!'
+            assert isinstance(e.value, ValueError)
 
 
-def test_future_catches_exception():
+def test_future_catches_exception(resources):
     def raiser():
-        raise Exception('Boooom!')
+        raise TypeError('Boooom!')
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(raiser)
         e = future.exception(timeout=10)
-        assert isinstance(e, Exception)
-        assert e.message == 'Boooom!'
+        assert isinstance(e, RemoteException)
+        assert isinstance(e, TypeError)
 
 
 def test_multiple_submit(resources):

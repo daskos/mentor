@@ -8,6 +8,7 @@ from mesos.interface import mesos_pb2
 from .proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
                                DockerInfo, Environment, ExecutorInfo, Mem,
                                TaskInfo, TaskStatus)
+from .utils import remote_exception
 
 
 class PickleMixin(object):
@@ -30,6 +31,13 @@ class PythonTaskStatus(PickleMixin, TaskStatus):
     def __init__(self, data=None, **kwargs):
         super(PythonTaskStatus, self).__init__(**kwargs)
         self.data = data
+
+    @property
+    def exception(self):
+        try:
+            return remote_exception(*self.data)
+        except:
+            return None
 
 
 class PythonTask(PickleMixin, TaskInfo):
@@ -105,6 +113,20 @@ class PythonTask(PickleMixin, TaskInfo):
         fn, args, kwargs = self.data
         return fn(*args, **kwargs)
 
+    def retry(self, status):
+        if self.attempt < self.retries:
+            logging.info('Task {} attempt #{} rescheduled due to failure with state '
+                         '{} and message {}'.format(self.id, self.attempt,
+                                                    status.state, status.message))
+            self.attempt += 1
+            status.state = 'TASK_STAGING'
+        else:
+            logging.error('Aborting due to task {} failed for {} attempts in state '
+                          '{} with message {}'.format(self.id, self.retries,
+                                                      status.state, status.message))
+            raise RuntimeError('Task {} failed with state {} and message {}'.format(
+                self.id, status.state, status.message))
+
     def update(self, status):
         assert isinstance(status, TaskStatus)
         self.on_update(status)
@@ -125,19 +147,11 @@ class PythonTask(PickleMixin, TaskInfo):
         logging.error('Task {} has been failed with state {} due to {}'.format(
             self.id.value, status.state, status.message))
 
-        if isinstance(status.data, Exception):  # won't retry due to code error
+        try:
+            raise status.exception  # won't retry due to code error in PythonTaskStatus
+        except KeyError as e:
+            # not a code error, e.g. problem during deployment
+            self.retry(status)
+        else:
             logging.error('Aborting due to task {} failed with state {} and message '
                           '{}'.format(self.id, status.state, status.message))
-            raise status.data
-        elif self.attempt < self.retries:
-            logging.info('Task {} attempt #{} rescheduled due to failure with state '
-                         '{} and message {}'.format(self.id, self.attempt,
-                                                    status.state, status.message))
-            self.attempt += 1
-            status.state = 'TASK_STAGING'
-        else:
-            logging.error('Aborting due to task {} failed for {} attempts in state '
-                          '{} with message {}'.format(self.id, self.retries,
-                                                      status.state, status.message))
-            raise RuntimeError('Task {} failed with state {} and message {}'.format(
-                self.id, status.state, status.message))

@@ -115,14 +115,14 @@ class QueueScheduler(Scheduler):
         logging.info('Updated task {} state to {}'.format(status.task_id,
                                                           status.state))
         try:
-            task.update(status)
+            task.update(status)  # creates new task.status in case of retry
         except:
             self.healthy = False
             driver.stop()
             raise
-
-        if status.has_terminated():
-            del self.tasks[task.id]
+        finally:
+            if status.has_terminated():
+                del self.tasks[task.id]
 
         self.report()
 

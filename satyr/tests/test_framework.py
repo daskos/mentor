@@ -5,6 +5,7 @@ from satyr.messages import PythonTask
 from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
                                     DockerInfo, Mem, TaskID, TaskInfo)
 from satyr.scheduler import QueueScheduler, Running
+from satyr.utils import RemoteException
 
 
 @pytest.fixture
@@ -24,7 +25,7 @@ def docker_command():
                     command=CommandInfo(value='echo 100'),
                     container=ContainerInfo(
                         type='DOCKER',
-                        docker=DockerInfo(image='lensa/satyr:latest')))
+                        docker=DockerInfo(image='lensa/satyr')))
     return task
 
 
@@ -101,7 +102,7 @@ def test_docker_python_exception():
     sched = QueueScheduler()
 
     def error():
-        raise Exception('Dummy exception on executor side!')
+        raise TypeError('Dummy exception on executor side!')
 
     task = PythonTask(id=TaskID(value='test-python-task-id'),
                       fn=error, name='test-python-task-name',
@@ -111,8 +112,8 @@ def test_docker_python_exception():
         sched.submit(task)
         sched.wait()
         assert task.status.has_failed()
-        assert isinstance(task.status.data, Exception)
-        assert task.status.data.message == 'Dummy exception on executor side!'
+        assert isinstance(task.status.exception, RemoteException)
+        assert isinstance(task.status.exception, TypeError)
 
 
 def test_parallel_execution(mocker, docker_python):

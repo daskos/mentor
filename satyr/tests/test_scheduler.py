@@ -108,14 +108,18 @@ def test_runner_context_manager():
 
 
 def test_scheduler_retries(mocker):
-    task = PythonTask(id=TaskID(value='oversized-in-memory'), name='test',
+    task = PythonTask(id=TaskID(value='non-existing-docker-image'), name='test',
                       fn=lambda: range(int(10e10)), docker='pina/sen',
                       resources=[Cpus(0.1), Mem(128), Disk(0)])
     sched = QueueScheduler(name='test-executor-lost', retries=3)
 
     mocker.spy(sched, 'on_update')
-    with Running(sched, name='test-scheduler') as driver:
+    with Running(sched, name='test-scheduler'):
         sched.submit(task)
         sched.wait()
 
-        # TODO write assertions
+    assert sched.on_update.call_count == 3
+
+    states = ['TASK_STARTING', 'TASK_STARTING', 'TASK_FAILED']
+    for ((args, kwargs), state) in zip(sched.on_update.call_args_list, states):
+        assert args[1].state == state

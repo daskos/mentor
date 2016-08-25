@@ -5,6 +5,7 @@ import logging
 import signal
 import sys
 import threading
+import traceback
 from functools import partial
 
 from mesos.interface import mesos_pb2
@@ -66,9 +67,12 @@ class OneOffExecutor(Executor):
                 logging.info('Executing task...')
                 result = task()
             except Exception as e:
-                logging.exception('Task errored')
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                tb = ''.join(traceback.format_tb(exc_traceback))
+                logging.exception('Task errored with {}'.format(e))
                 driver.update(status(state='TASK_FAILED',
-                                     data=e, message=e.message))
+                                     data=(e, tb),
+                                     message=e.message))
                 logging.info('Sent TASK_RUNNING status update')
             else:
                 driver.update(status(state='TASK_FINISHED', data=result))

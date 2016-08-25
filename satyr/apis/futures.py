@@ -51,7 +51,12 @@ class Future(object):
             if self.status.has_finished():
                 return self.status.data
             else:
-                raise self.status.data
+                try:
+                    print(self.status.data)
+                    raise self.status.exception
+                except TypeError:
+                    raise ValueError(
+                        'Future result indicates that task failed!')
 
     def exception(self, timeout=None):
         with seconds(timeout):
@@ -60,7 +65,7 @@ class Future(object):
             if self.status.has_finished():
                 return None
             else:
-                return self.status.data
+                return self.status.exception
 
     def add_done_callback(self, fn):
         raise NotImplementedError()

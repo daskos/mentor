@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from satyr.executor import OneOffExecutor, Running
 from satyr.messages import PythonTask, PythonTaskStatus
+from satyr.utils import RemoteException
 
 
 class FakeThread(object):
@@ -61,7 +62,9 @@ def test_failed_status_updates(mocker):
     status = args[0]
     assert isinstance(status, PythonTaskStatus)
     assert status.state == 'TASK_FAILED'
-    assert isinstance(status.data, Exception)
+    assert isinstance(status.data, tuple)
+    assert isinstance(status.exception, RemoteException)
+
     assert status.message == 'Booom!'
 
 

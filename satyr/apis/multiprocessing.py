@@ -27,7 +27,7 @@ class AsyncResult(object):
             return self.status.data
         else:
             try:
-                raise self.status.data
+                raise self.status.exception
             except TypeError:
                 raise ValueError('Async result indicate task failed!')
 

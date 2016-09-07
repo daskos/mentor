@@ -106,6 +106,7 @@ class QueueScheduler(Scheduler):
                     task.slave_id = offer.slave_id
                     task.status.state = 'TASK_STARTING'
                 # running with empty task list will decline the offer
+                logging.info('lanunches {}'.format(tasks))
                 driver.launch(offer.id, tasks)
             except Exception:
                 logging.exception('Exception occured during task launch!')

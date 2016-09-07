@@ -16,7 +16,7 @@ setup(name='satyr',
       packages=['satyr', 'satyr.proxies', 'satyr.apis'],
       long_description=(open('README.md').read() if exists('README.md')
                         else ''),
-      install_requires=['cloudpickle', 'kazoo', 'futures'],
+      install_requires=['cloudpickle', 'kazoo', 'futures', 'protobuf'],
       extras_require={'mesos': ['mesos.native']},
       setup_requires=['pytest-runner'],
       tests_require=['pytest-mock', 'pytest'],

@@ -1,5 +1,4 @@
-FROM lensa/mesos-python:0.27.0-py2.7-python-2.7
+FROM kszucs/mesos-alpine:python
 
 ADD . /satyr
-WORKDIR /satyr
-RUN pip install .
+RUN pip install -e /satyr

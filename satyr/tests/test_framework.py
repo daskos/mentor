@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
+import os
+
 import pytest
 from satyr.messages import PythonTask
 from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
@@ -25,7 +27,7 @@ def docker_command():
                     command=CommandInfo(value='echo 100'),
                     container=ContainerInfo(
                         type='DOCKER',
-                        docker=DockerInfo(image='lensa/satyr')))
+                        docker=DockerInfo(image='alpine')))
     return task
 
 
@@ -58,12 +60,16 @@ def test_command(mocker, command):
     assert args[1].state == 'TASK_FINISHED'
 
 
+@pytest.mark.skipif(not os.environ.get('DOCKER_CONTAINERIZER_ENABLED', False),
+                    reason='docker containerizer is disabled in ci setup')
 def test_docker_command(mocker, docker_command):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
     with Running(sched, name='test-scheduler'):
         sched.submit(docker_command)
+        import time
+        time.sleep(5)
         sched.wait()  # block until all tasks finishes
 
     calls = sched.on_update.call_args_list
@@ -157,3 +163,36 @@ def test_docker_python_result(mocker, docker_python):
         sched.submit(docker_python)
         sched.wait()  # block until all tasks finishes
         assert docker_python.status.data == 10
+
+
+@pytest.mark.skip
+def test_executor_resize(mocker, docker_python):
+    sched = QueueScheduler()
+
+    from time import sleep
+
+    task1 = PythonTask(id=TaskID(value='t1'),
+                       fn=sleep, args=[60],
+                       name='t1',
+                       resources=[Cpus(0.1), Mem(64), Disk(0)])
+    task2 = PythonTask(id=TaskID(value='t2'),
+                       fn=sleep, args=[60],
+                       name='t2',
+                       resources=[Cpus(0.2), Mem(128), Disk(0)])
+
+    task1.executor.executor_id.value = 'test'
+    task2.executor.executor_id.value = 'test'
+    task1.executor.resources = [Cpus(0.01), Mem(32)]
+    task2.executor.resources = [Cpus(0.01), Mem(32)]
+
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    #logger = logging.getLogger()
+    # logger.setLevel(logging.DEBUG)
+
+    with Running(sched, name='test-scheduler'):
+
+        sched.submit(task1)
+        sched.submit(task2)
+        sched.wait()  # block until all tasks finishes
+        #assert docker_python.status.data == 10

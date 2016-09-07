@@ -51,10 +51,10 @@ def test_multiple_apply_async(resources):
     with Pool(name='test-pool') as pool:
         results = [pool.apply_async(fn, [1, i],
                                     resources=resources)
-                   for i in range(10)]
-        values = [res.get(timeout=20) for res in results]
+                   for i in range(5)]
+        values = [res.get(timeout=30) for res in results]
 
-    assert values == [i + 1 for i in range(10)]
+    assert values == [i + 1 for i in range(5)]
 
 
 def test_queue_apply_async(zk, resources):

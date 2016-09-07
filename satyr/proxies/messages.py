@@ -383,6 +383,22 @@ class DockerInfo(MessageProxy):
     proto = mesos_pb2.ContainerInfo.DockerInfo
 
 
+class MesosInfo(MessageProxy):
+    proto = mesos_pb2.ContainerInfo.MesosInfo
+
+
+class Image(MessageProxy):
+    proto = mesos_pb2.Image
+
+
+class Appc(MessageProxy):
+    proto = mesos_pb2.Image.Appc
+
+
+class Docker(MessageProxy):
+    proto = mesos_pb2.Image.Docker
+
+
 class Request(MessageProxy):
     proto = mesos_pb2.Request
 

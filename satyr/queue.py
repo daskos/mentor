@@ -14,22 +14,15 @@ from .utils import TimeoutError
 
 class SerializableMixin(object):
 
-    def __getstate__(self):
-        hosts = ["{}:{}".format(h, p) for h, p in self.client.hosts]
-        client = ",".join(hosts)
-
-        result = self.__dict__.copy()
-        result['client'] = client
-
-        return result
-
-    def __setstate__(self, state):
-        hosts = state.pop('client')
-        client = KazooClient(hosts)
+    @staticmethod
+    def init(cls, hosts, path):
+        client = KazooClient(hosts=hosts)
         client.start()
+        return cls(client, path)
 
-        self.__dict__ = state
-        self.client = client
+    def __reduce__(self):
+        hosts = ",".join(["{}:{}".format(h, p) for h, p in self.client.hosts])
+        return (SerializableMixin.init, (self.__class__, hosts, self.path))
 
 
 class CompatMixin(object):  # Python's Queue compatibility
@@ -57,7 +50,7 @@ class Queue(CompatMixin, SerializableMixin, KazooQueue):
                 with seconds(timeout):
                     while result is None:
                         result = super(Queue, self).get()
-                        time.sleep(0.1)
+                        time.sleep(0.001)
             except TimeoutError:
                 raise Empty
 

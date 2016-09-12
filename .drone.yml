@@ -78,7 +78,7 @@ services:
 
 
 pipeline:
-  docker:
+  docker-build:
     image: docker:dind
     network_mode: host
     volumes:
@@ -98,36 +98,33 @@ pipeline:
     commands:
       - python setup.py test
 
+  docker-push:
+    image: plugins/docker
+    repo: lensa/satyr
+    file: Dockerfile
+    tag:
+      - master
+    when:
+      branch: master
 
-# publish:
-#   pypi:
-#     repository: https://pypi.python.org/pypi
-#     username: $$PYPI_USERNAME
-#     password: $$PYPI_PASSWORD
-#     distributions:
-#       - sdist
-#     when:
-#       event: [tag]
 
-#   docker:
-#     username: $$DOCKERHUB_USERNAME
-#     password: $$DOCKERHUB_PASSWORD
-#     email: $$DOCKERHUB_EMAIL
-#     repo: lensa/satyr
-#     file: Dockerfile
-#     tag:
-#       - $$TAG
-#       - latest
-#     when:
-#       event: [tag]
+  # pypi:
+  #   repository: https://pypi.python.org/pypi
+  #   username: $$PYPI_USERNAME
+  #   password: $$PYPI_PASSWORD
+  #   distributions:
+  #     - sdist
+  #   when:
+  #     event: [tag]
 
-#   docker:
-#     username: $$DOCKERHUB_USERNAME
-#     password: $$DOCKERHUB_PASSWORD
-#     email: $$DOCKERHUB_EMAIL
-#     repo: lensa/satyr
-#     file: Dockerfile
-#     tag:
-#       - master
-#     when:
-#       branch: master
+  # docker:
+  #   username: $$DOCKERHUB_USERNAME
+  #   password: $$DOCKERHUB_PASSWORD
+  #   email: $$DOCKERHUB_EMAIL
+  #   repo: lensa/satyr
+  #   file: Dockerfile
+  #   tag:
+  #     - $$TAG
+  #     - latest
+  #   when:
+  #     event: [tag]

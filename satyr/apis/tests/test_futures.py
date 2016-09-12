@@ -23,8 +23,8 @@ def test_submit():
         assert isinstance(future1, Future)
         assert isinstance(future2, Future)
 
-        assert future1.result(timeout=10) == 3
-        assert future2.result(timeout=10) == 15
+        assert future1.result(timeout=30) == 3
+        assert future2.result(timeout=30) == 15
 
 
 def test_future_states():
@@ -34,7 +34,7 @@ def test_future_states():
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(add, [1, 2])
-        with timeout(15):
+        with timeout(30):
             while future.running():
                 time.sleep(0.1)
             assert future.running() is False
@@ -56,7 +56,7 @@ def test_future_raises_exception(resources):
     with MesosPoolExecutor(name='futures-pool') as executor:
         with pytest.raises(RemoteException) as e:
             future1 = executor.submit(raiser, resources=resources)
-            future1.result(timeout=10)
+            future1.result(timeout=30)
             assert isinstance(e.value, ValueError)
 
 
@@ -66,7 +66,7 @@ def test_future_catches_exception(resources):
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(raiser)
-        e = future.exception(timeout=10)
+        e = future.exception(timeout=30)
         assert isinstance(e, RemoteException)
         assert isinstance(e, TypeError)
 

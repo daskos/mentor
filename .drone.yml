@@ -4,6 +4,7 @@ services:
     image: registry
     environment:
       - STORAGE_PATH=/var/lib/registry
+      - REGISTRY_LOG_LEVEL=error
     volumes:
       - /tmp/registry:/var/lib/registry
   zookeeper:

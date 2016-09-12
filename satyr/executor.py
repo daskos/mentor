@@ -1,8 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-import atexit
 import logging
-import signal
+import multiprocessing
 import sys
 import threading
 import traceback
@@ -13,76 +12,55 @@ from mesos.native import MesosExecutorDriver
 
 from .interface import Executor
 from .messages import PythonTaskStatus
-from .proxies import ExecutorProxy
+from .proxies import ExecutorDriverProxy, ExecutorProxy
+from .utils import Interruptable
 
 
-class Running(object):
+class ExecutorDriver(ExecutorDriverProxy, Interruptable):
 
     def __init__(self, executor):
         executor = ExecutorProxy(executor)
-        self.driver = MesosExecutorDriver(executor)
-
-        def shutdown(signal, frame):
-            self.stop()
-
-        signal.signal(signal.SIGINT, shutdown)
-        signal.signal(signal.SIGTERM, shutdown)
-        atexit.register(self.stop)
-
-    def run(self):
-        return self.driver.run()
-
-    def start(self):
-        status = self.driver.start()
-        assert status == mesos_pb2.DRIVER_RUNNING
-        return status
-
-    def stop(self):
-        return self.driver.stop()
-
-    def join(self):
-        return self.driver.join()
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.stop()
-        self.join()
-        if exc_type:
-            raise exc_type, exc_value, traceback
+        driver = MesosExecutorDriver(executor)
+        super(ExecutorDriver, self).__init__(driver)
 
 
-class OneOffExecutor(Executor):
+class ThreadExecutor(Executor):
 
-    def on_launch(self, driver, task):
+    def __init__(self):
+        self.tasks = {}
+
+    def is_idle(self):
+        return not len(self.tasks)
+
+    def run(self, driver, task):
         status = partial(PythonTaskStatus, task_id=task.id)
+        driver.update(status(state='TASK_RUNNING'))
+        logging.info('Sent TASK_RUNNING status update')
 
-        def run_task():
-            driver.update(status(state='TASK_RUNNING'))
+        try:
+            logging.info('Executing task...')
+            result = task()
+        except Exception as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tb = ''.join(traceback.format_tb(exc_traceback))
+            logging.exception('Task errored with {}'.format(e))
+            driver.update(status(state='TASK_FAILED',
+                                 data=(e, tb),
+                                 message=e.message))
             logging.info('Sent TASK_RUNNING status update')
-
-            try:
-                logging.info('Executing task...')
-                result = task()
-            except Exception as e:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                tb = ''.join(traceback.format_tb(exc_traceback))
-                logging.exception('Task errored with {}'.format(e))
-                driver.update(status(state='TASK_FAILED',
-                                     data=(e, tb),
-                                     message=e.message))
-                logging.info('Sent TASK_RUNNING status update')
-            else:
-                driver.update(status(state='TASK_FINISHED', data=result))
-                logging.info('Sent TASK_FINISHED status update')
-            finally:
-                # stopper = threading.Timer(1.0, driver.stop)
-                # stopper.start()
+        else:
+            driver.update(status(state='TASK_FINISHED', data=result))
+            logging.info('Sent TASK_FINISHED status update')
+        finally:
+            del self.tasks[task.id]
+            if self.is_idle():  # no more tasks left
+                logging.info(
+                    'Executor stops due to no more executing tasks left')
                 driver.stop()
 
-        thread = threading.Thread(target=run_task)
+    def on_launch(self, driver, task):
+        self.tasks[task.id] = task  # track tasks runned by this executor
+        thread = threading.Thread(target=self.run, args=(driver, task))
         thread.start()
 
     def on_kill(self, driver, task_id):
@@ -92,7 +70,23 @@ class OneOffExecutor(Executor):
         driver.stop()
 
 
+class ProcessExecutor(ThreadExecutor):
+
+    def on_launch(self, driver, task):
+        self.tasks[task.id] = task  # track tasks runned by this executor
+        process = multiprocessing.Process(target=self.run, args=(driver, task))
+        process.start()
+
+
 if __name__ == '__main__':
-    status = Running(OneOffExecutor()).run()
+    print(sys.argv)
+    if sys.argv[1] == 'multi-process':
+        executor = ProcessExecutor()
+    elif sys.argv[1] == 'multi-thread':
+        executor = ThreadExecutor()
+    else:
+        raise ValueError('Unknown executor type {}'.format(sys.argv[0]))
+
+    status = ExecutorDriver(executor).run()
     code = 0 if status == mesos_pb2.DRIVER_STOPPED else 1
     sys.exit(code)

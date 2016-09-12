@@ -1,62 +1,31 @@
 from __future__ import absolute_import, division, print_function
 
-import atexit
 import logging
 import os
-import signal
 import time
 from collections import Counter
 
-from mesos.interface import mesos_pb2
 from mesos.native import MesosSchedulerDriver
 
 from .binpack import bfd
 from .interface import Scheduler
-from .proxies import SchedulerProxy
+from .proxies import SchedulerDriverProxy, SchedulerProxy
 from .proxies.messages import FrameworkInfo, TaskInfo, encode
-from .utils import timeout
+from .utils import Interruptable, timeout
 
 
-class Running(object):
+class SchedulerDriver(SchedulerDriverProxy, Interruptable):
 
     def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
                  implicit_acknowledge=1, *args, **kwargs):
         framework = FrameworkInfo(name=name, user=user, *args, **kwargs)
-        scheduler = SchedulerProxy(scheduler)
-        self.driver = MesosSchedulerDriver(scheduler, encode(framework),
-                                           master, implicit_acknowledge)
+        driver = MesosSchedulerDriver(SchedulerProxy(scheduler),
+                                      encode(framework),
+                                      master, implicit_acknowledge)
+        super(SchedulerDriver, self).__init__(driver)
 
-        def shutdown(signal, frame):
-            self.stop()
 
-        signal.signal(signal.SIGINT, shutdown)
-        signal.signal(signal.SIGTERM, shutdown)
-        atexit.register(self.stop)
-
-    def run(self):
-        return self.driver.run()
-
-    def start(self):
-        status = self.driver.start()
-        assert status == mesos_pb2.DRIVER_RUNNING
-        return status
-
-    def stop(self):
-        return self.driver.stop()
-
-    def join(self):
-        return self.driver.join()
-
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.stop()
-        self.join()
-        if exc_type:
-            raise exc_type, exc_value, traceback
-
+# TODO create a scheduler which is reusing the same type of executors
 
 class QueueScheduler(Scheduler):
 
@@ -130,5 +99,5 @@ class QueueScheduler(Scheduler):
 
 if __name__ == '__main__':
     scheduler = QueueScheduler()
-    with Running(scheduler, name='test') as fw:
+    with SchedulerDriver(scheduler, name='test') as fw:
         scheduler.wait()

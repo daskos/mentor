@@ -4,7 +4,7 @@ import pytest
 from satyr.messages import PythonTask, PythonTaskStatus
 from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
                                     TaskID)
-from satyr.scheduler import QueueScheduler, Running
+from satyr.scheduler import QueueScheduler, SchedulerDriver
 
 
 @pytest.fixture
@@ -101,7 +101,7 @@ def test_task_result(mocker, python_task, offers):
 # integration test
 def test_runner_context_manager():
     sched = QueueScheduler(name='test-scheduler')
-    with Running(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler'):
         pass
 
     assert sched
@@ -114,7 +114,7 @@ def test_scheduler_retries(mocker):
     sched = QueueScheduler(name='test-executor-lost', retries=3)
 
     mocker.spy(sched, 'on_update')
-    with Running(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler'):
         sched.submit(task)
         sched.wait()
 

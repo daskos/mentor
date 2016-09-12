@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import pkg_resources as _pkg_resources
 
 from .scheduler import QueueScheduler
-from .executor import OneOffExecutor
+from .executor import ThreadExecutor, ProcessExecutor
 from .messages import PythonTask, PythonTaskStatus  # important to register classes
 
 

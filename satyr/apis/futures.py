@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ALL_COMPLETED, CancelledError, TimeoutError
 
 from ..messages import PythonTask
-from ..scheduler import QueueScheduler, Running
+from ..scheduler import QueueScheduler, SchedulerDriver
 from ..utils import timeout as seconds
 
 __all__ = ('MesosPoolExecutor',
@@ -52,7 +52,6 @@ class Future(object):
                 return self.status.data
             else:
                 try:
-                    print(self.status.data)
                     raise self.status.exception
                 except TypeError:
                     raise ValueError(
@@ -71,7 +70,7 @@ class Future(object):
         raise NotImplementedError()
 
 
-class MesosPoolExecutor(Running):
+class MesosPoolExecutor(SchedulerDriver):
 
     def __init__(self, max_workers=-1, *args, **kwargs):
         self.max_worker = max_workers  # TODO

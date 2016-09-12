@@ -1,17 +1,19 @@
 from __future__ import absolute_import, division, print_function
 
-from satyr.executor import OneOffExecutor, Running
+from satyr.executor import ExecutorDriver, ThreadExecutor
 from satyr.messages import PythonTask, PythonTaskStatus
 from satyr.utils import RemoteException
 
 
 class FakeThread(object):
 
-    def __init__(self, target):
+    def __init__(self, target, args=(), kwargs={}):
         self.target = target
+        self.args = args
+        self.kwargs = kwargs
 
     def start(self):
-        return self.target()
+        return self.target(*self.args, **self.kwargs)
 
 
 def test_finished_status_updates(mocker):
@@ -20,7 +22,7 @@ def test_finished_status_updates(mocker):
     driver = mocker.Mock()
     task = PythonTask(fn=sum, args=[range(5)])
 
-    executor = OneOffExecutor()
+    executor = ThreadExecutor()
     executor.on_launch(driver, task)
 
     calls = driver.update.call_args_list
@@ -47,7 +49,7 @@ def test_failed_status_updates(mocker):
     driver = mocker.Mock()
     task = PythonTask(fn=failing_function, args=['arbitrary', 'args'])
 
-    executor = OneOffExecutor()
+    executor = ThreadExecutor()
     executor.on_launch(driver, task)
 
     calls = driver.update.call_args_list

@@ -4,7 +4,7 @@ import time
 
 from ..messages import PythonTask
 from ..queue import Queue
-from ..scheduler import QueueScheduler, Running
+from ..scheduler import QueueScheduler, SchedulerDriver
 from ..utils import timeout
 
 __all__ = ('Pool',
@@ -43,7 +43,7 @@ class AsyncResult(object):
         return self.status.has_succeeded()
 
 
-class Pool(Running):
+class Pool(SchedulerDriver):
 
     def __init__(self, processes=-1, *args, **kwargs):
         self.processes = processes

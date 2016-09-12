@@ -40,6 +40,7 @@ class PythonTaskStatus(PickleMixin, TaskStatus):
             return None
 
 
+# TODO create custom messages per executor
 class PythonTask(PickleMixin, TaskInfo):
 
     proto = mesos_pb2.TaskInfo(
@@ -48,9 +49,9 @@ class PythonTask(PickleMixin, TaskInfo):
 
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
-                 command='python -m satyr.executor', envs={}, uris=[],
-                 docker='satyr', force_pull=False, retries=3,
-                 **kwds):
+                 command='python -m satyr.executor multi-thread',
+                 envs={}, uris=[], docker='satyr', force_pull=False,
+                 retries=3, **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
         self.executor = ExecutorInfo(

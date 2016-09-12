@@ -76,12 +76,12 @@ def test_queue_apply_async(zk, resources):
 def test_map_async(resources):
     with Pool(name='test-pool') as pool:
         results = pool.map_async(
-            lambda tpl: tpl[0] + tpl[1], zip(range(5), range(5)),
+            lambda tpl: tpl[0] + tpl[1], zip(range(3), range(3)),
             resources=resources)
         assert all([isinstance(res, AsyncResult) for res in results])
-        values = [res.get(timeout=30) for res in results]
+        values = [res.get(timeout=60) for res in results]
 
-    assert values == [i + i for i in range(5)]
+    assert values == [i + i for i in range(3)]
 
 
 def test_map(resources):

@@ -61,7 +61,7 @@ services:
       - MESOS_ISOLATION=filesystem/linux,docker/runtime
       - MESOS_DOCKER_REGISTRY=http://localhost:5000
       - MESOS_PORT=5052
-      - MESOS_RESOURCES=cpus(*):0.5;mem(*):1024;ports(*):[11000-11999]
+      - MESOS_RESOURCES=cpus(*):1.0;mem(*):2048;ports(*):[11000-11999]
       - MESOS_WORK_DIR=/tmp/mesos
       ## To speed up provisioning images, default is copy
       # MESOS_IMAGE_PROVISIONER_BACKEND=aufs

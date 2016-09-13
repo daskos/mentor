@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import cloudpickle
 from mesos.interface import mesos_pb2
-from satyr.messages import PythonTask, PythonTaskStatus
+from satyr.messages import PythonExecutor, PythonTask, PythonTaskStatus
 from satyr.proxies.messages import TaskID, decode, encode
 from satyr.utils import RemoteException
 
@@ -53,6 +53,35 @@ def test_python_task_status_encode():
     assert proto.state == mesos_pb2.TASK_RUNNING
 
 
+def test_python_executor_decode():
+    proto = mesos_pb2.ExecutorInfo(
+        labels=mesos_pb2.Labels(
+            labels=[mesos_pb2.Label(key='python')]))
+    executor = decode(proto)
+    assert isinstance(executor, PythonExecutor)
+
+
+def test_python_executor_encode():
+    executor = PythonExecutor(id='test-id',
+                              docker='test_image',
+                              force_pull=False,
+                              envs={'TEST': 'value'},
+                              uris=['test_dependency'])
+
+    proto = encode(executor)
+    assert isinstance(proto, mesos_pb2.ExecutorInfo)
+    assert isinstance(proto.container, mesos_pb2.ContainerInfo)
+    assert isinstance(proto.container.mesos, mesos_pb2.ContainerInfo.MesosInfo)
+    assert isinstance(proto.container.mesos.image, mesos_pb2.Image)
+    assert proto.container.mesos.image.docker.name == 'test_image'
+    assert proto.container.mesos.image.cached == True
+    assert proto.executor_id.value == 'test-id'
+    assert proto.command.value == 'python -m satyr.executor'
+    assert proto.command.uris[0].value == 'test_dependency'
+    assert proto.command.environment.variables[0].name == 'TEST'
+    assert proto.command.environment.variables[0].value == 'value'
+
+
 def test_python_task_decode():
     fn, args, kwargs = sum, [range(5)], {}
     data = (fn, args, kwargs)
@@ -85,17 +114,13 @@ def test_python_task_encode():
     dumped = cloudpickle.dumps(data)
 
     task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                      id='test-id',
-                      envs={'TEST': 'value'},
-                      uris=['test_dependency'])
+                      id='test-id')
 
     proto = encode(task)
     assert isinstance(proto, mesos_pb2.TaskInfo)
     assert proto.data == dumped
     assert proto.task_id.value == 'test-id'
-    assert proto.executor.command.uris[0].value == 'test_dependency'
-    assert proto.executor.command.environment.variables[0].name == 'TEST'
-    assert proto.executor.command.environment.variables[0].value == 'value'
+    assert isinstance(proto.executor, mesos_pb2.ExecutorInfo)
 
     task = PythonTask(id=TaskID(value='test-id'))
     task.data = data

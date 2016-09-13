@@ -5,7 +5,7 @@ import os
 import pytest
 from satyr.messages import PythonTask
 from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
-                                    DockerInfo, Mem, TaskID, TaskInfo)
+                                    Mem, TaskID, TaskInfo)
 from satyr.scheduler import QueueScheduler, SchedulerDriver
 from satyr.utils import RemoteException
 
@@ -27,7 +27,7 @@ def docker_command():
                     command=CommandInfo(value='echo 100'),
                     container=ContainerInfo(
                         type='DOCKER',
-                        docker=DockerInfo(image='alpine')))
+                        docker=ContainerInfo.DockerInfo(image='alpine')))
     return task
 
 

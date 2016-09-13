@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import time
 
-from ..messages import PythonTask
+from ..messages import Cpus, Disk, Mem, PythonExecutor, PythonTask
 from ..queue import Queue
 from ..scheduler import QueueScheduler, SchedulerDriver
 from ..utils import timeout
@@ -70,8 +70,12 @@ class Pool(SchedulerDriver):
         result = self.apply_async(func=func, args=args, kwds=kwds, **kwargs)
         return result.get(timeout=-1)
 
-    def apply_async(self, func, args=[], kwds={}, callback=None, **kwargs):
-        task = PythonTask(name=kwargs.pop('name', 'multiprocessing'),
-                          fn=func, args=args, kwargs=kwds, **kwargs)
+    def apply_async(self, func, args=[], kwds={}, name='multiprocessing',
+                    docker='satyr', force_pull=False, envs={}, uris=[],
+                    resources=[Cpus(0.1), Mem(128), Disk(0)], **kwargs):
+        executor = PythonExecutor(docker=docker, force_pull=force_pull,
+                                  envs=envs, uris=uris)
+        task = PythonTask(name=name, fn=func, args=args, kwargs=kwds,
+                          resources=resources, executor=executor, **kwargs)
         self.scheduler.submit(task)
         return AsyncResult(task)

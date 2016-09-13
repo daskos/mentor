@@ -79,14 +79,6 @@ class ProcessExecutor(ThreadExecutor):
 
 
 if __name__ == '__main__':
-    print(sys.argv)
-    if sys.argv[1] == 'multi-process':
-        executor = ProcessExecutor()
-    elif sys.argv[1] == 'multi-thread':
-        executor = ThreadExecutor()
-    else:
-        raise ValueError('Unknown executor type {}'.format(sys.argv[0]))
-
-    status = ExecutorDriver(executor).run()
+    status = ExecutorDriver(ThreadExecutor()).run()
     code = 0 if status == mesos_pb2.DRIVER_STOPPED else 1
     sys.exit(code)

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from satyr.messages import PythonTask, PythonTaskStatus
+from satyr.messages import PythonExecutor, PythonTask, PythonTaskStatus
 from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
                                     TaskID)
 from satyr.scheduler import QueueScheduler, SchedulerDriver
@@ -98,7 +98,6 @@ def test_task_result(mocker, python_task, offers):
     assert python_task.status.data == 10
 
 
-# integration test
 def test_runner_context_manager():
     sched = QueueScheduler(name='test-scheduler')
     with SchedulerDriver(sched, name='test-scheduler'):
@@ -109,8 +108,8 @@ def test_runner_context_manager():
 
 def test_scheduler_retries(mocker):
     task = PythonTask(id=TaskID(value='non-existing-docker-image'), name='test',
-                      fn=lambda: range(int(10e10)), docker='pina/sen',
-                      resources=[Cpus(0.1), Mem(128), Disk(0)])
+                      fn=lambda: range(int(10e10)), resources=[Cpus(0.1), Mem(128), Disk(0)],
+                      executor=PythonExecutor(docker='pina/sen'))
     sched = QueueScheduler(name='test-executor-lost', retries=3)
 
     mocker.spy(sched, 'on_update')

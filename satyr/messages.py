@@ -5,9 +5,9 @@ import logging
 import cloudpickle
 from mesos.interface import mesos_pb2
 
-from .proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk, Docker,
-                               DockerInfo, Environment, ExecutorInfo, Image,
-                               Mem, MesosInfo, TaskInfo, TaskStatus)
+from .proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
+                               Environment, ExecutorInfo, Image, Mem, TaskInfo,
+                               TaskStatus)
 from .utils import remote_exception
 
 
@@ -40,6 +40,62 @@ class PythonTaskStatus(PickleMixin, TaskStatus):
             return None
 
 
+class PythonExecutor(ExecutorInfo):
+
+    proto = mesos_pb2.ExecutorInfo(
+        labels=mesos_pb2.Labels(
+            labels=[mesos_pb2.Label(key='python')]))
+
+    def __init__(self, docker='satyr', force_pull=False, envs={}, uris=[], **kwds):
+        super(PythonExecutor, self).__init__(**kwds)
+        self.container = ContainerInfo(
+            type='MESOS',
+            mesos=ContainerInfo.MesosInfo(
+                image=Image(type='DOCKER',
+                            docker=Image.Docker())))
+        self.command = CommandInfo(value='python -m satyr.executor',
+                                   shell=True)
+        self.force_pull = force_pull
+        self.docker = docker
+        self.envs = envs
+        self.uris = uris
+
+    @property
+    def docker(self):
+        return self.container.mesos.image.docker.name
+
+    @docker.setter
+    def docker(self, value):
+        self.container.mesos.image.docker.name = value
+
+    @property
+    def force_pull(self):
+        # cached is the opposite of force pull image
+        return not self.container.mesos.image.cached
+
+    @force_pull.setter
+    def force_pull(self, value):
+        self.container.mesos.image.cached = not value
+
+    @property
+    def uris(self):
+        return [uri.value for uri in self.command.uris]
+
+    @uris.setter
+    def uris(self, value):
+        self.command.uris = [{'value': v} for v in value]
+
+    @property
+    def envs(self):
+        envs = self.command.environment.variables
+        return {env.name: env.value for env in envs}
+
+    @envs.setter
+    def envs(self, value):
+        envs = [{'name': k, 'value': v} for k, v in value.items()]
+        self.command.environment = Environment(variables=envs)
+
+
 # TODO create custom messages per executor
 class PythonTask(PickleMixin, TaskInfo):
 
@@ -49,70 +105,14 @@ class PythonTask(PickleMixin, TaskInfo):
 
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
-                 command='python -m satyr.executor multi-thread',
-                 envs={}, uris=[], docker='satyr', force_pull=False,
-                 retries=3, **kwds):
+                 executor=None, retries=3, **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
-        self.executor = ExecutorInfo(
-            container=ContainerInfo(
-                type='MESOS',
-                mesos=MesosInfo(
-                    image=Image(type='DOCKER',
-                                docker=Docker()))),
-            command=CommandInfo(shell=True))
+        self.executor = executor or PythonExecutor()
         self.data = (fn, args, kwargs)
-        self.envs = envs
-        self.uris = uris
-        self.docker = docker
-        self.force_pull = force_pull
-        self.command = command
         self.resources = resources
         self.retries = retries
         self.attempt = 1
-
-    @property
-    def uris(self):
-        return [uri.value for uri in self.executor.command.uris]
-
-    @uris.setter
-    def uris(self, value):
-        self.executor.command.uris = [{'value': v} for v in value]
-
-    @property
-    def envs(self):
-        envs = self.executor.command.environment.variables
-        return {env.name: env.value for env in envs}
-
-    @envs.setter
-    def envs(self, value):
-        envs = [{'name': k, 'value': v} for k, v in value.items()]
-        self.executor.command.environment = Environment(variables=envs)
-
-    @property
-    def command(self):
-        return self.executor.command.value
-
-    @command.setter
-    def command(self, value):
-        self.executor.command.value = value
-
-    @property
-    def docker(self):
-        return self.executor.container.mesos.image.docker.name
-
-    @docker.setter
-    def docker(self, value):
-        self.executor.container.mesos.image.docker.name = value
-
-    @property
-    def force_pull(self):
-        # cached is the opposite of force pull image
-        return not self.executor.container.mesos.image.cached
-
-    @force_pull.setter
-    def force_pull(self, value):
-        self.executor.container.mesos.image.cached = not value
 
     def __call__(self):
         fn, args, kwargs = self.data

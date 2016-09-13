@@ -10,6 +10,9 @@ from .messages import PythonTask, PythonTaskStatus  # important to register clas
 __version__ = _pkg_resources.get_distribution('satyr').version
 
 __all__ = ('QueueScheduler',
-           'OneOffExecutor',
+           'SchedulerDriver',
+           'ExecutorDriver',
+           'ThreadExecutor',
+           'ProcessExecutor',
            'PythonTask',
            'PythonTaskStatus')

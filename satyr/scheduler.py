@@ -26,7 +26,7 @@ class SchedulerDriver(SchedulerDriverProxy, Interruptable):
 
 
 # TODO create a scheduler which is reusing the same type of executors
-
+# todo configurable to reuse executors
 class QueueScheduler(Scheduler):
 
     def __init__(self, *args, **kwargs):

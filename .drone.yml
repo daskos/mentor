@@ -85,11 +85,11 @@ pipeline:
       - /var/run/docker.sock:/var/run/docker.sock
     commands:
       - docker build -t lensa/satyr .
-      - docker tag lensa/satyr localhost:5000/satyr
-      - docker push localhost:5000/satyr
+      - docker tag lensa/satyr localhost:5000/lensa/satyr
+      - docker push localhost:5000/lensa/satyr
 
   test:
-    image: kszucs/mesos-alpine:python
+    image: lensa/satyr
     network_mode: host
     environment:
       - LIBPROCESS_IP=127.0.0.1

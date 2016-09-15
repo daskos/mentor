@@ -1,5 +1,5 @@
-FROM kszucs/mesos-alpine:python
+FROM kszucs/miniconda-mesos
 
-ADD . /satyr
-RUN pip --no-cache-dir install /satyr \
- && rm -rf /satyr
+ADD . /opt/satyr
+RUN pip --no-cache-dir install /opt/satyr \
+

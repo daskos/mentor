@@ -1,0 +1,18 @@
+FROM debian:8
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PATH=/opt/conda/bin:$PATH 
+
+RUN echo "deb http://repos.mesosphere.io/debian/ jessie main" > /etc/apt/sources.list.d/mesosphere.list \
+ && apt-key adv --keyserver keyserver.ubuntu.com --recv E56151BF \
+ && apt-get -y --fix-missing update \
+ && apt-get -y install --no-install-recommends curl bzip2 mesos ca-certificates \
+ && curl -o /tmp/miniconda.sh https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh \
+ && /bin/bash /tmp/miniconda.sh -f -b -p /opt/conda \
+ && rm /tmp/miniconda.sh \
+ && pip --no-cache-dir install 'protobuf<3' \
+ && mkdir -p /tmp/mesos && cp -r /usr/lib/python2.7/site-packages/mesos* /tmp/mesos \
+ && apt-get remove --purge -y curl bzip2 mesos $(apt-mark showauto) \
+ && apt-get -y install --no-install-recommends libcurl3 libsvn1 libevent-2.0 libevent-openssl-2.0 libevent-pthreads-2.0 \
+ && mv /tmp/mesos/* /opt/conda/lib/python2.7/site-packages/ \
+ && rm -rf /tmp/mesos \
+ && apt-get clean && rm -rf /var/lib/apt/lists/*

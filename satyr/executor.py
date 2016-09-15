@@ -54,13 +54,13 @@ class ThreadExecutor(Executor):
         finally:
             del self.tasks[task.id]
             if self.is_idle():  # no more tasks left
-                logging.info(
-                    'Executor stops due to no more executing tasks left')
+                logging.info('Executor stops due to no more executing '
+                             'tasks left')
                 driver.stop()
 
     def on_launch(self, driver, task):
-        self.tasks[task.id] = task  # track tasks runned by this executor
         thread = threading.Thread(target=self.run, args=(driver, task))
+        self.tasks[task.id] = thread  # track tasks runned by this executor
         thread.start()
 
     def on_kill(self, driver, task_id):
@@ -73,9 +73,18 @@ class ThreadExecutor(Executor):
 class ProcessExecutor(ThreadExecutor):
 
     def on_launch(self, driver, task):
-        self.tasks[task.id] = task  # track tasks runned by this executor
         process = multiprocessing.Process(target=self.run, args=(driver, task))
+        self.tasks[task.id] = process  # track tasks runned by this executor
         process.start()
+
+    def on_kill(self, driver, task_id):
+        self.tasks[task_id].terminate()
+        del self.tasks[task_id]
+
+        if self.is_idle():  # no more tasks left
+            logging.info('Executor stops due to no more executing '
+                         'tasks left')
+            driver.stop()
 
 
 if __name__ == '__main__':

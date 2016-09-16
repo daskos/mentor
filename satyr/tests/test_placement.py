@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from satyr.binpack import bf, bfd, ff, ffd, mr, weight
+from satyr.placement import bf, bfd, ff, ffd, mr, weight
 from satyr.proxies.messages import Cpus, Mem, Offer, TaskInfo
 
 

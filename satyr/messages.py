@@ -40,62 +40,6 @@ class PythonTaskStatus(PickleMixin, TaskStatus):
             return None
 
 
-class PythonExecutor(ExecutorInfo):
-
-    proto = mesos_pb2.ExecutorInfo(
-        labels=mesos_pb2.Labels(
-            labels=[mesos_pb2.Label(key='python')]))
-
-    def __init__(self, docker='satyr', force_pull=False, envs={}, uris=[], **kwds):
-        super(PythonExecutor, self).__init__(**kwds)
-        self.container = ContainerInfo(
-            type='MESOS',
-            mesos=ContainerInfo.MesosInfo(
-                image=Image(type='DOCKER',
-                            docker=Image.Docker())))
-        self.command = CommandInfo(value='python -m satyr.executor',
-                                   shell=True)
-        self.force_pull = force_pull
-        self.docker = docker
-        self.envs = envs
-        self.uris = uris
-
-    @property
-    def docker(self):
-        return self.container.mesos.image.docker.name
-
-    @docker.setter
-    def docker(self, value):
-        self.container.mesos.image.docker.name = value
-
-    @property
-    def force_pull(self):
-        # cached is the opposite of force pull image
-        return not self.container.mesos.image.cached
-
-    @force_pull.setter
-    def force_pull(self, value):
-        self.container.mesos.image.cached = not value
-
-    @property
-    def uris(self):
-        return [uri.value for uri in self.command.uris]
-
-    @uris.setter
-    def uris(self, value):
-        self.command.uris = [{'value': v} for v in value]
-
-    @property
-    def envs(self):
-        envs = self.command.environment.variables
-        return {env.name: env.value for env in envs}
-
-    @envs.setter
-    def envs(self, value):
-        envs = [{'name': k, 'value': v} for k, v in value.items()]
-        self.command.environment = Environment(variables=envs)
-
-
 # TODO create custom messages per executor
 class PythonTask(PickleMixin, TaskInfo):
 
@@ -160,3 +104,60 @@ class PythonTask(PickleMixin, TaskInfo):
         else:
             logging.error('Aborting due to task {} failed with state {} and message '
                           '{}'.format(self.id, status.state, status.message))
+
+
+class PythonExecutor(ExecutorInfo):
+
+    proto = mesos_pb2.ExecutorInfo(
+        labels=mesos_pb2.Labels(
+            labels=[mesos_pb2.Label(key='python')]))
+
+    def __init__(self, docker='satyr', force_pull=False,
+                 envs={}, uris=[], **kwds):
+        super(PythonExecutor, self).__init__(**kwds)
+        self.container = ContainerInfo(
+            type='MESOS',
+            mesos=ContainerInfo.MesosInfo(
+                image=Image(type='DOCKER',
+                            docker=Image.Docker())))
+        self.command = CommandInfo(value='python -m satyr.executor',
+                                   shell=True)
+        self.force_pull = force_pull
+        self.docker = docker
+        self.envs = envs
+        self.uris = uris
+
+    @property
+    def docker(self):
+        return self.container.mesos.image.docker.name
+
+    @docker.setter
+    def docker(self, value):
+        self.container.mesos.image.docker.name = value
+
+    @property
+    def force_pull(self):
+        # cached is the opposite of force pull image
+        return not self.container.mesos.image.cached
+
+    @force_pull.setter
+    def force_pull(self, value):
+        self.container.mesos.image.cached = not value
+
+    @property
+    def uris(self):
+        return [uri.value for uri in self.command.uris]
+
+    @uris.setter
+    def uris(self, value):
+        self.command.uris = [{'value': v} for v in value]
+
+    @property
+    def envs(self):
+        envs = self.command.environment.variables
+        return {env.name: env.value for env in envs}
+
+    @envs.setter
+    def envs(self, value):
+        envs = [{'name': k, 'value': v} for k, v in value.items()]
+        self.command.environment = Environment(variables=envs)

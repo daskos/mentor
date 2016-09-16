@@ -4,6 +4,16 @@ import signal
 from contextlib import contextmanager
 
 
+def partition(pred, iterable):
+    trues, falses = [], []
+    for item in iterable:
+        if pred(item):
+            trues.append(item)
+        else:
+            falses.append(item)
+    return trues, falses
+
+
 class TimeoutError(Exception):
     pass
 

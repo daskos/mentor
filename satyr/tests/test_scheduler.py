@@ -1,6 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
+from functools import partial
+
 import pytest
+from satyr.constraint import has
 from satyr.messages import PythonExecutor, PythonTask, PythonTaskStatus
 from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
                                     TaskID)
@@ -28,7 +31,7 @@ def offers():
 
 def test_launch_decline(mocker, python_task, offers):
     driver = mocker.Mock()
-    sched = QueueScheduler(name='test-scheduler')
+    sched = QueueScheduler()
 
     sched.submit(python_task)
     sched.on_offers(driver, offers)
@@ -49,7 +52,7 @@ def test_launch_decline(mocker, python_task, offers):
 
 def test_task_callbacks(mocker, python_task, offers):
     driver = mocker.Mock()
-    sched = QueueScheduler(name='test-scheduler')
+    sched = QueueScheduler()
     mocker.spy(python_task, 'on_update')
     mocker.spy(python_task, 'on_success')
 
@@ -82,7 +85,7 @@ def test_task_callbacks(mocker, python_task, offers):
 
 def test_task_result(mocker, python_task, offers):
     driver = mocker.Mock()
-    sched = QueueScheduler(name='test-scheduler')
+    sched = QueueScheduler()
 
     sched.submit(python_task)
     sched.on_offers(driver, offers)
@@ -99,7 +102,7 @@ def test_task_result(mocker, python_task, offers):
 
 
 def test_runner_context_manager():
-    sched = QueueScheduler(name='test-scheduler')
+    sched = QueueScheduler()
     with SchedulerDriver(sched, name='test-scheduler'):
         pass
 
@@ -110,7 +113,7 @@ def test_scheduler_retries(mocker):
     task = PythonTask(id=TaskID(value='non-existing-docker-image'), name='test',
                       fn=lambda: range(int(10e10)), resources=[Cpus(0.1), Mem(128), Disk(0)],
                       executor=PythonExecutor(docker='pina/sen'))
-    sched = QueueScheduler(name='test-executor-lost', retries=3)
+    sched = QueueScheduler()
 
     mocker.spy(sched, 'on_update')
     with SchedulerDriver(sched, name='test-scheduler'):
@@ -122,3 +125,16 @@ def test_scheduler_retries(mocker):
     states = ['TASK_STARTING', 'TASK_STARTING', 'TASK_FAILED']
     for ((args, kwargs), state) in zip(sched.on_update.call_args_list, states):
         assert args[1].state == state
+
+
+def test_scheduler_constraints(mocker):
+    task = PythonTask(name='test', fn=sum, args=[range(10)],
+                      resources=[Cpus(0.1), Mem(128), Disk(0)])
+    sched = QueueScheduler(constraint=partial(has, attribute='satyr'))
+
+    with SchedulerDriver(sched, name='test-scheduler') as driver:
+        sched.submit(task)
+        sched.wait()
+
+    # TODO check scheduled with the proper offer
+    assert task.status.data == sum(range(10))

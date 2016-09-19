@@ -30,8 +30,7 @@ class SchedulerDriver(SchedulerDriverProxy, Interruptable):
 # TODO reuse the same type of executors
 class Framework(Scheduler):
 
-    def __init__(self, constraint=pour, placement=partial(bfd, cpus=1, mem=1),
-                 *args, **kwargs):
+    def __init__(self, constraint=pour, placement=partial(bfd, cpus=1, mem=1)):
         self.healthy = True
         self.tasks = {}      # holds task_id => task pairs
         self.placement = placement
@@ -85,7 +84,7 @@ class Framework(Scheduler):
 
         # reject offers not met constraints
         for offer in declines:
-            driver.decline(offer)
+            driver.decline(offer.id)
 
         # launch tasks
         for offer, tasks in bins:

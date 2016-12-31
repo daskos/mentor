@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from satyr.executor import ExecutorDriver, ThreadExecutor
+from malefico.executor import ExecutorDriver
+from satyr.executor import ThreadExecutor
 from satyr.messages import PythonTask, PythonTaskStatus
 from satyr.utils import RemoteException
 

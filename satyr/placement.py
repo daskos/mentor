@@ -21,10 +21,8 @@ def weight(items, **kwargs):
 
 def ff(items, targets):
     """First-Fit
-
     This is perhaps the simplest packing heuristic;
     it simply packs items in the next available bin.
-
     Complexity O(n^2)
     """
     bins = [(target, []) for target in targets]
@@ -42,14 +40,11 @@ def ff(items, targets):
 
 def ffd(items, targets, **kwargs):
     """First-Fit Decreasing
-
     This is perhaps the simplest packing heuristic;
     it simply packs items in the next available bin.
-
     This algorithm differs only from Next-Fit Decreasing
     in having a 'sort'; that is, the items are pre-sorted
     (largest to smallest).
-
     Complexity O(n^2)
     """
     sizes = zip(items, weight(items, **kwargs))
@@ -60,7 +55,6 @@ def ffd(items, targets, **kwargs):
 
 def mr(items, targets, **kwargs):
     """Max-Rest
-
     Complexity O(n^2)
     """
     bins = [(target, []) for target in targets]
@@ -81,7 +75,6 @@ def mr(items, targets, **kwargs):
 
 def mrpq(items, targets):
     """Max-Rest Priority Queue
-
     Complexity O(n*log(n))
     """
     raise NotImplementedError()
@@ -89,7 +82,6 @@ def mrpq(items, targets):
 
 def bf(items, targets, **kwargs):
     """Best-Fit
-
     Complexity O(n^2)
     """
     bins = [(target, []) for target in targets]
@@ -115,7 +107,6 @@ def bf(items, targets, **kwargs):
 
 def bfd(items, targets, **kwargs):
     """Best-Fit Decreasing
-
     Complexity O(n^2)
     """
     sizes = zip(items, weight(items, **kwargs))
@@ -126,7 +117,6 @@ def bfd(items, targets, **kwargs):
 
 def bfh(items, targets):
     """Best-Fit-Heap
-
     Slightly Improved Complexity
     """
     raise NotImplementedError()

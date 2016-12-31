@@ -4,7 +4,8 @@ import time
 
 from ..messages import Cpus, Disk, Mem, PythonExecutor, PythonTask
 from ..queue import Queue
-from ..scheduler import QueueScheduler, SchedulerDriver
+from ..scheduler import Framework
+from ..core.scheduler import  SchedulerDriver
 from ..utils import timeout
 
 __all__ = ('Pool',
@@ -47,7 +48,7 @@ class Pool(SchedulerDriver):
 
     def __init__(self, processes=-1, *args, **kwargs):
         self.processes = processes
-        self.scheduler = QueueScheduler()
+        self.scheduler = Framework()
         super(Pool, self).__init__(self.scheduler, *args, **kwargs)
 
     def close(self):

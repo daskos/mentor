@@ -3,10 +3,11 @@ from __future__ import absolute_import, division, print_function
 import os
 
 import pytest
-from satyr.messages import PythonTask
+from satyr .messages import PythonTask
 from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
-                                    Mem, TaskID, TaskInfo)
-from satyr.scheduler import QueueScheduler, SchedulerDriver
+                                 Mem, TaskID, TaskInfo)
+from malefico.scheduler import MesosSchedulerDriver
+from satyr.scheduler import QueueScheduler
 from satyr.utils import RemoteException
 
 
@@ -44,7 +45,7 @@ def test_command(mocker, command):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
-    with SchedulerDriver(sched, name='test-scheduler'):
+    with MesosSchedulerDriver(sched, name='test-scheduler'):
         sched.submit(command)
         sched.wait()  # block until all tasks finishes
 
@@ -66,7 +67,7 @@ def test_docker_command(mocker, docker_command):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
-    with SchedulerDriver(sched, name='test-scheduler'):
+    with MesosSchedulerDriver(sched, name='test-scheduler'):
         sched.submit(docker_command)
         import time
         time.sleep(5)
@@ -88,7 +89,7 @@ def test_docker_python(mocker, docker_python):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
-    with SchedulerDriver(sched, name='test-scheduler'):
+    with MesosSchedulerDriver(sched, name='test-scheduler'):
         sched.submit(docker_python)
         sched.wait()  # block until all tasks finishes
 
@@ -114,7 +115,7 @@ def test_docker_python_exception():
                       fn=error, name='test-python-task-name',
                       resources=[Cpus(0.1), Mem(64), Disk(0)])
 
-    with SchedulerDriver(sched, name='test-scheduler'):
+    with MesosSchedulerDriver(sched, name='test-scheduler'):
         sched.submit(task)
         sched.wait()
         assert task.status.has_failed()

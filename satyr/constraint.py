@@ -14,4 +14,3 @@ def has(offers, attribute):
                 return True
         return False
 
-    return partition(pred, offers)

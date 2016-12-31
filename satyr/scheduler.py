@@ -6,28 +6,19 @@ import time
 from collections import Counter
 from functools import partial
 
-from mesos.native import MesosSchedulerDriver
 
-from .constraint import pour
-from .interface import Scheduler
-from .placement import bfd
-from .proxies import SchedulerDriverProxy, SchedulerProxy
-from .proxies.messages import FrameworkInfo, TaskInfo, encode
-from .utils import Interruptable, timeout
+from satyr.constraint import pour
+from malefico.interface import Scheduler
+from satyr.placement import bfd
+from satyr.proxies.messages import FrameworkInfo, TaskInfo, OfferID, Offer, SlaveID, TaskStatus
+from malefico.scheduler import SchedulerDriver
+from satyr.utils import Interruptable, timeout
 
-
-class SchedulerDriver(SchedulerDriverProxy, Interruptable):
-
-    def __init__(self, scheduler, name, user='', master=os.getenv('MESOS_MASTER'),
-                 implicit_acknowledge=1, *args, **kwargs):
-        framework = FrameworkInfo(name=name, user=user, *args, **kwargs)
-        driver = MesosSchedulerDriver(SchedulerProxy(scheduler),
-                                      encode(framework),
-                                      master, implicit_acknowledge)
-        super(SchedulerDriver, self).__init__(driver)
-
+log = logging.getLogger(__name__)
 
 # TODO reuse the same type of executors
+
+
 class Framework(Scheduler):
 
     def __init__(self, constraint=pour, placement=partial(bfd, cpus=1, mem=1)):
@@ -54,7 +45,7 @@ class Framework(Scheduler):
         counts = Counter(states)
         message = ', '.join(['{}: {}'.format(key, count)
                              for key, count in counts.items()])
-        logging.info('Task states: {}'.format(message))
+        log.info('Task states: {}'.format(message))
 
     def wait(self, seconds=-1):
         with timeout(seconds):
@@ -66,10 +57,11 @@ class Framework(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-        self.tasks[task.id] = task
+        self.tasks[task.task_id] = task
 
     def on_offers(self, driver, offers):
-        logging.info('Received offers: {}'.format(sum(offers)))
+        offers = [Offer(**f) for f in offers]
+        log.info('Received offers: {}'.format(sum(offers)))
         self.report()
 
         # query tasks ready for scheduling
@@ -93,24 +85,25 @@ class Framework(Scheduler):
                     task.slave_id = offer.slave_id
                     task.status.state = 'TASK_STARTING'
                 # running with empty task list will decline the offer
-                logging.info('launches {}'.format(tasks))
+                    log.info('launches {}'.format(tasks))
                 driver.launch(offer.id, tasks)
             except Exception:
-                logging.exception('Exception occured during task launch!')
+                log.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
+        status = TaskStatus(**status)
         task = self.tasks[status.task_id]
-        logging.info('Updated task {} state to {}'.format(status.task_id,
-                                                          status.state))
+        log.info('Updated task {} state to {}'.format(status.task_id,
+                                                      status.state))
         try:
             task.update(status)  # creates new task.status in case of retry
-        except:
+        except Exception as ex:
             self.healthy = False
             driver.stop()
             raise
         finally:
             if status.has_terminated():
-                del self.tasks[task.id]
+                del self.tasks[task.task_id]
 
         self.report()
 
@@ -120,6 +113,7 @@ QueueScheduler = Framework
 
 
 if __name__ == '__main__':
-    scheduler = QueueScheduler()
-    with SchedulerDriver(scheduler, name='test') as fw:
-        scheduler.wait()
+    import getpass
+    sched = Framework()
+    with SchedulerDriver(os.getenv('MESOS_MASTER') or "localhost", sched, "Queue", getpass.getuser()) as driver:
+        sched.wait()

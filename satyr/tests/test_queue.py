@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import threading
-from Queue import Empty
+from six.moves.queue import Empty
 
 import cloudpickle as cp
 import pytest

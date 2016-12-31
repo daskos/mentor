@@ -68,7 +68,7 @@ class SignalHandler(object):
     def __exit__(self, exc_type, exc_value, traceback):
         self.release()
         if exc_type:
-            raise exc_type, exc_value, traceback
+            raise (exc_type, exc_value, traceback)
 
 
 class Interruptable(object):
@@ -92,12 +92,11 @@ class Interruptable(object):
         self.stop()
         self.join()
         if exc_type:
-            raise exc_type, exc_value, traceback
+            raise (exc_type, exc_value, traceback)
 
 
 class RemoteException(Exception):
     """ Remote Exception
-
     Contains the exception and traceback from a remotely run task
      - Include the original error message
      - Respond to try-except blocks with original error type

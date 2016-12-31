@@ -1,13 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from mesos.interface import mesos_pb2
 from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
-                                    FrameworkInfo, Map, Mem, MessageProxy,
-                                    Offer, RegisterProxies, ResourcesMixin,
+                                    FrameworkInfo, Mem, Message,
+                                    Offer, ResourcesMixin,
                                     ScalarResource, TaskID, TaskInfo,
-                                    TaskStatus, decode, encode)
+                                    TaskStatus)
 
+from tornado.escape import json_decode as decode
+from tornado.escape import json_encode as encode
 
 @pytest.fixture
 def d():
@@ -18,58 +19,58 @@ def d():
                   'e': {'f': 6}}}
 
 
-def test_map_init(d):
-    m = Map(**d)
-    assert isinstance(m, Map)
+def test_Message_init(d):
+    m = Message(**d)
+    assert isinstance(m, Message)
     assert isinstance(m, dict)
 
 
-def test_map_get(d):
-    m = Map(**d)
+def test_Message_get(d):
+    m = Message(**d)
     assert m['a'] == 1
     assert m['c']['e']['f'] == 6
     assert m['b'][0]['j'] == 9
     assert m['b'][1]['g'] == 7
     assert isinstance(m['b'], list)
-    assert isinstance(m['b'][1], Map)
+    assert isinstance(m['b'][1], Message)
 
 
-def test_map_dot_get(d):
-    m = Map(**d)
+def test_Message_dot_get(d):
+    m = Message(**d)
     assert m.a == 1
     assert m.c.e.f == 6
     assert m.b[0].j == 9
     assert m.b[1].g == 7
     assert isinstance(m.b, list)
-    assert isinstance(m.b[1], Map)
+    assert isinstance(m.b[1], Message)
 
 
-def test_map_set(d):
-    m = Map(**d)
+def test_Message_set(d):
+    m = Message(**d)
     m['A'] = 11
     m['a'] = 'one'
     m['z'] = {'Z': {'omega': 20}}
     assert m['a'] == 'one'
     assert m['A'] == 11
     assert m['z']['Z']['omega'] == 20
-    assert isinstance(m['z'], Map)
-    assert isinstance(m['z']['Z'], Map)
+    assert isinstance(m['z'], Message)
+    assert isinstance(m['z']['Z'], Message)
 
 
-def test_map_dot_set(d):
-    m = Map(**d)
+def test_Message_dot_set(d):
+    m = Message(**d)
     m.A = 11
     m.a = 'one'
     m.z = {'Z': {'omega': 20}}
     assert m.a == 'one'
     assert m.A == 11
     assert m.z.Z.omega == 20
-    assert isinstance(m.z, Map)
-    assert isinstance(m.z.Z, Map)
+    assert isinstance(m.z, Message)
+    assert isinstance(m.z.Z, Message)
 
 
-# def test_map_set_missing(d):
-#     m = Map(**d)
+# def test_Message_set_missing(d):
+#     m = Message(**d)
 #     m['y']['o']['w'] = 9
 #     m.y.w.o = 6
 
@@ -78,9 +79,9 @@ def test_map_dot_set(d):
 
 
 def test_hash():
-    d1 = Map(a=Map(b=3), c=5)
-    d2 = Map(a=Map(b=3), c=5)
-    d3 = Map(a=Map(b=6), c=5)
+    d1 = Message(a=Message(b=3), c=5)
+    d2 = Message(a=Message(b=3), c=5)
+    d3 = Message(a=Message(b=6), c=5)
 
     assert hash(d1) == hash(d2)
     assert hash(d1) != hash(d3)
@@ -88,8 +89,8 @@ def test_hash():
 
 
 def test_dict_hashing():
-    d2 = Map(a=Map(b=3), c=5)
-    d3 = Map(a=Map(b=6), c=5)
+    d2 = Message(a=Message(b=3), c=5)
+    d3 = Message(a=Message(b=6), c=5)
 
     c = {}
     c[d2.a] = d2
@@ -99,49 +100,29 @@ def test_dict_hashing():
     assert c[d3.a] == d3
 
 
-def test_register_proxies():
-    class Base(object):
-        __metaclass__ = RegisterProxies
-        proto = 'base'
-
-    class First(Base):
-        proto = 'first'
-
-    class Second(Base):
-        proto = 'second'
-
-    class Third(Base):
-        proto = 'third'
-
-    assert Base.registry == [('third', Third),
-                             ('second', Second),
-                             ('first', First),
-                             ('base', Base)]
-
-
 def test_encode_resources():
-    pb = encode(Cpus(0.1))
+    pb = Cpus(0.1)
     assert pb.scalar.value == 0.1
     assert pb.name == 'cpus'
-    assert pb.type == mesos_pb2.Value.SCALAR
+    assert pb.type == "SCALAR"
 
-    pb = encode(Mem(16))
+    pb = Mem(16)
     assert pb.scalar.value == 16
     assert pb.name == 'mem'
-    assert pb.type == mesos_pb2.Value.SCALAR
+    assert pb.type == "SCALAR"
 
-    pb = encode(Disk(256))
+    pb = Disk(256)
     assert pb.scalar.value == 256
     assert pb.name == 'disk'
-    assert pb.type == mesos_pb2.Value.SCALAR
+    assert pb.type == "SCALAR"
 
 
-def test_encode_task_info_resources():
+def test_task_info_resources():
     task = TaskInfo(name='test-task',
-                    id=TaskID(value='test-task-id'),
+                    task_id=TaskID(value='test-task-id'),
                     resources=[Cpus(0.1), Mem(16)],
                     command=CommandInfo(value='testcmd'))
-    pb = encode(task)
+    pb = task
     assert pb.name == 'test-task'
     assert pb.task_id.value == 'test-task-id'
     assert pb.resources[0].name == 'cpus'
@@ -151,13 +132,13 @@ def test_encode_task_info_resources():
     assert pb.command.value == 'testcmd'
 
 
-def test_decode_framework_info():
-    message = mesos_pb2.FrameworkInfo(id=mesos_pb2.FrameworkID(value='test'))
-    wrapped = decode(message)
+def test_framework_info():
+    message = FrameworkInfo(id=FrameworkID(value='test'))
+    wrapped = message
 
-    assert isinstance(wrapped, MessageProxy)
+    assert isinstance(wrapped, Message)
     assert isinstance(wrapped, FrameworkInfo)
-    assert isinstance(wrapped.id, MessageProxy)
+    assert isinstance(wrapped.id, Message)
     assert isinstance(wrapped.id, FrameworkID)
 
 
@@ -368,20 +349,21 @@ def test_status_in_task_info():
     assert isinstance(t.status, TaskStatus)
     assert t.status.state == 'TASK_STAGING'
 
-    p = encode(t)
-    assert isinstance(p, mesos_pb2.TaskInfo)
-    with pytest.raises(AttributeError):
-        p.status
+    p = t
+    assert isinstance(p, TaskInfo)
+    #TODO Whats the point of this?
+    # with pytest.raises(AttributeError):
+    #     p.status
 
 
 def test_encode_task_info():
     t = TaskInfo(name='test-task',
-                 id=TaskID(value='test-task-id'),
+                 task_id=TaskID(value='test-task-id'),
                  resources=[Cpus(0.1), Mem(16)],
                  command=CommandInfo(value='echo 100'))
 
-    p = encode(t)
-    assert isinstance(p, mesos_pb2.TaskInfo)
+    p = t
+    assert isinstance(p, TaskInfo)
     assert p.command.value == 'echo 100'
     assert p.name == 'test-task'
     assert p.resources[0].name == 'cpus'
@@ -397,8 +379,9 @@ def test_non_strict_encode_task_info():
     t.result = 'some binary data'
     t.status = TaskStatus()
 
-    p = encode(t)
-    assert isinstance(p, mesos_pb2.TaskInfo)
+    p = t
+    assert isinstance(p, TaskInfo)
     assert p.command.value == 'echo 100'
-    with pytest.raises(AttributeError):
-        p.status
+    # TODO Whats the point of this?
+    # with pytest.raises(AttributeError):
+    #     p.status

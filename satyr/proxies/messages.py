@@ -3,15 +3,10 @@ from __future__ import absolute_import, division, print_function
 import operator
 from functools import partial
 from uuid import uuid4
-
-from google.protobuf.message import Message
-from mesos.interface import mesos_pb2
-
-from .. import protobuf
+import six
 
 
-class Map(dict):
-
+class Message(dict):
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -19,30 +14,36 @@ class Map(dict):
 
     @classmethod
     def cast(cls, v):
-        if isinstance(v, Map):
+        if isinstance(v, Message):
             return v
         elif isinstance(v, dict):
-            return Map(**v)
+            return Message(**v)
+        elif isinstance(v, (str, bytes)):
+            return v
         elif hasattr(v, '__iter__'):
-            return map(cls.cast, v)
+            return [cls.cast(item) for item in v]
         else:
             return v
 
     def __setitem__(self, k, v):
         # accidental __missing__ call will create a new node
-        super(Map, self).__setitem__(k, self.cast(v))
+        super(Message, self).__setitem__(k, self.cast(v))
 
     def __setattr__(self, k, v):
         prop = getattr(self.__class__, k, None)
         if isinstance(prop, property):  # property binding
             prop.fset(self, v)
-        elif hasattr(v, '__call__'):  # method binding
-            self.__dict__[k] = v
+        # elif hasattr(v, '__call__'):  # method binding, not sure why?
+        #     self.__dict__[k] = v
         else:
             self[k] = v
 
     def __getattr__(self, k):
-        return self[k]
+        if k != "__call__":
+            return self[k]
+
+    def __dir__(self):
+        return super().__dir__() + [str(k) for k in self.keys()]
 
     # def __delattr__(self, k):
     #    del self[k]
@@ -56,55 +57,63 @@ class Map(dict):
         return hash(tuple(self.items()))
 
 
-class RegisterProxies(type):
-
-    def __init__(cls, name, bases, nmspc):
-        super(RegisterProxies, cls).__init__(name, bases, nmspc)
-        if not hasattr(cls, 'registry'):
-            cls.registry = []
-        cls.registry.insert(0, (cls.proto, cls))
-        # cls.registry -= set(bases) # Remove base classes
-
-    # Metamethods, called on class objects:
-    def __iter__(cls):
-        return iter(cls.registry)
+class Variable(Message):
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
 
 
-class MessageProxy(Map):
-    __metaclass__ = RegisterProxies
-    proto = Message
+class Environment(Message):
+    def __init__(self, **kwargs):
+
+        # self.variables = []
+        # if not isinstance(variables, dict):
+        #     raise TypeError("Expecting a dict of variables")
+        # for name, value in six.iteritems(variables):
+        #     self.variables.append(Variable(name, value))
+        super(Message, self).__init__(**kwargs)
 
 
-class Environment(MessageProxy):
-    proto = mesos_pb2.Environment
+class Scalar(Message):
+    def __init__(self, **kwargs):
+        super(Message, self).__init__(**kwargs)
 
 
-class Scalar(MessageProxy):
-    proto = mesos_pb2.Value.Scalar
-
-
-class Resource(MessageProxy):
-    proto = mesos_pb2.Resource
+class Resource(Message):
+    def __init__(self, **kwargs):
+        super(Message, self).__init__(**kwargs)
 
 
 # TODO: RangeResource e.g. ports
 class ScalarResource(Resource):
-    # supports comparison and basic arithmetics with scalars
-    proto = mesos_pb2.Resource(type=mesos_pb2.Value.SCALAR)
-
     def __init__(self, value=None, **kwargs):
         super(Resource, self).__init__(**kwargs)
         if value is not None:
             self.scalar = Scalar(value=value)
 
-    def __cmp__(self, other):
-        first, second = float(self), float(other)
-        if first < second:
-            return -1
-        elif first > second:
-            return 1
-        else:
-            return 0
+    def __eq__(self, second):
+        first, second = float(self), float(second)
+        return not first < second and not second < first
+
+    def __ne__(self, second):
+        first, second = float(self), float(second)
+        return self < second or second < first
+
+    def __gt__(self, second):
+        first, second = float(self), float(second)
+        return second < first
+
+    def __ge__(self, second):
+        first, second = float(self), float(second)
+        return not first < second
+
+    def __le__(self, second):
+        first, second = float(self), float(second)
+        return not second < first
+
+    def __lt__(self, second):
+        first, second = float(self), float(second)
+        return first < second
 
     def __repr__(self):
         return "<{}: {}>".format(self.__class__.__name__, self.scalar.value)
@@ -117,79 +126,81 @@ class ScalarResource(Resource):
         value = op(float(first), float(second))
         return cls(value=value)
 
-    def __add__(self, other):
-        return self._op(operator.add, self, other)
+    def __add__(self, second):
+        return self._op(operator.add, self, second)
 
-    def __radd__(self, other):
-        return self._op(operator.add, other, self)
+    def __radd__(self, second):
+        return self._op(operator.add, second, self)
 
-    def __sub__(self, other):
-        return self._op(operator.sub, self, other)
+    def __sub__(self, second):
+        return self._op(operator.sub, self, second)
 
-    def __rsub__(self, other):
-        return self._op(operator.sub, other, self)
+    def __rsub__(self, second):
+        return self._op(operator.sub, second, self)
 
-    def __mul__(self, other):
-        return self._op(operator.mul, self, other)
+    def __mul__(self, second):
+        return self._op(operator.mul, self, second)
 
-    def __rmul__(self, other):
-        return self._op(operator.mul, other, self)
+    def __rmul__(self, second):
+        return self._op(operator.mul, second, self)
 
-    def __truediv__(self, other):
-        return self._op(operator.truediv, self, other)
+    def __truediv__(self, second):
+        return self._op(operator.truediv, self, second)
 
-    def __rtruediv__(self, other):
-        return self._op(operator.truediv, other, self)
+    def __rtruediv__(self, second):
+        return self._op(operator.truediv, second, self)
 
-    def __iadd__(self, other):
-        self.scalar.value = float(self._op(operator.add, self, other))
+    def __iadd__(self, second):
+        self.scalar.value = float(self._op(operator.add, self, second))
         return self
 
-    def __isub__(self, other):
-        self.scalar.value = float(self._op(operator.sub, self, other))
+    def __isub__(self, second):
+        self.scalar.value = float(self._op(operator.sub, self, second))
         return self
 
 
 class Cpus(ScalarResource):
-    proto = mesos_pb2.Resource(name='cpus', type=mesos_pb2.Value.SCALAR)
+    def __init__(self, value):
+        super(Cpus, self).__init__(value=value, name="cpus", type="SCALAR")
 
 
 class Mem(ScalarResource):
-    proto = mesos_pb2.Resource(name='mem', type=mesos_pb2.Value.SCALAR)
+    def __init__(self, value):
+        super(Mem, self).__init__(value=value, name="mem", type="SCALAR")
 
 
 class Disk(ScalarResource):
-    proto = mesos_pb2.Resource(name='disk', type=mesos_pb2.Value.SCALAR)
+    def __init__(self, value):
+        super(Disk, self).__init__(value=value, name="disk", type="SCALAR")
 
 
 class ResourcesMixin(object):
-
     @classmethod
-    def _cast_zero(cls, other=0):
-        if other == 0:
+    def _cast_zero(cls, second=0):
+        if second == 0:
             return cls(resources=[Cpus(0), Mem(0), Disk(0)])
         else:
-            return other
+            return second
 
     @property
     def cpus(self):
         for res in self.resources:
-            if isinstance(res, Cpus):
-                return res
+            if res.name == "cpus":
+                return Cpus(res.scalar.value)
         return Cpus(0.0)
 
     @property
     def mem(self):
         for res in self.resources:
-            if isinstance(res, Mem):
-                return res
+            if res.name == "mem":
+                return Mem(res.scalar.value)
         return Mem(0.0)
 
     @property
     def disk(self):
         for res in self.resources:
-            if isinstance(res, Disk):
-                return res
+            if res.name == "disk":
+                return Disk(res.scalar.value)
         return Disk(0.0)
 
     # @property
@@ -202,86 +213,130 @@ class ResourcesMixin(object):
         return '<{}: {}>'.format(self.__class__.__name__,
                                  ', '.join(map(str, self.resources)))
 
-    def __cmp__(self, other):
-        other = self._cast_zero(other)
+    def __eq__(self, second):
+        second = self._cast_zero(second)
+        return all([self.cpus == second.cpus,
+                    self.mem == second.mem,
+                    self.disk == second.disk])
 
-        if all([self.cpus < other.cpus,
-                self.mem < other.mem,
-                self.disk < other.disk]):
-            # all resources are smaller the task will fit into offer
-            return -1
-        elif any([self.cpus > other.cpus,
-                  self.mem > other.mem,
-                  self.disk > other.disk]):
-            # any resources is bigger task won't fit into offer
-            return 1
-        else:
-            return 0
+    def __ne__(self, second):
+        second = self._cast_zero(second)
+        return all([self.cpus != second.cpus,
+                    self.mem != second.mem,
+                    self.disk != second.disk])
 
-    def __radd__(self, other):  # to support sum()
-        other = self._cast_zero(other)
-        return self + other
+    def __gt__(self, second):
+        second = self._cast_zero(second)
+        return any([self.cpus > second.cpus,
+                    self.mem > second.mem,
+                    self.disk > second.disk])
 
-    def __add__(self, other):
-        other = self._cast_zero(other)
-        # ports = list(set(self.ports) | set(other.ports))
-        cpus = self.cpus + other.cpus
-        mem = self.mem + other.mem
-        disk = self.disk + other.disk
+    def __ge__(self, second):
+        second = self._cast_zero(second)
+        return any([self.cpus >= second.cpus,
+                    self.mem >= second.mem,
+                    self.disk >= second.disk])
+
+    def __le__(self, second):
+        second = self._cast_zero(second)
+        return all([self.cpus <= second.cpus,
+                    self.mem <= second.mem,
+                    self.disk <= second.disk])
+
+    def __lt__(self, second):
+        second = self._cast_zero(second)
+        return all([self.cpus < second.cpus,
+                    self.mem < second.mem,
+                    self.disk < second.disk])
+
+    def __radd__(self, second):  # to support sum()
+        second = self._cast_zero(second)
+        return self + second
+
+    def __add__(self, second):
+        second = self._cast_zero(second)
+        # ports = list(set(self.ports) | set(second.ports))
+        cpus = self.cpus + second.cpus
+        mem = self.mem + second.mem
+        disk = self.disk + second.disk
         mixin = self.__class__()
         mixin.resources = [cpus, disk, mem]
         return mixin
 
-    def __sub__(self, other):
-        other = self._cast_zero(other)
-        # ports = list(set(self.ports) | set(other.ports))
-        cpus = self.cpus - other.cpus
-        mem = self.mem - other.mem
-        disk = self.disk - other.disk
+    def __sub__(self, second):
+        second = self._cast_zero(second)
+        # ports = list(set(self.ports) | set(second.ports))
+        cpus = self.cpus - second.cpus
+        mem = self.mem - second.mem
+        disk = self.disk - second.disk
         mixin = self.__class__()
         mixin.resources = [cpus, disk, mem]
         return mixin
 
-    def __iadd__(self, other):
-        other = self._cast_zero(other)
-        added = self + other
+    def __iadd__(self, second):
+        second = self._cast_zero(second)
+        added = self + second
         self.resources = added.resources
         return self
 
-    def __isub__(self, other):
-        other = self._cast_zero(other)
-        subbed = self - other
+    def __isub__(self, second):
+        second = self._cast_zero(second)
+        subbed = self - second
         self.resources = subbed.resources
         return self
 
 
-class FrameworkID(MessageProxy):
-    proto = mesos_pb2.FrameworkID
+class FrameworkID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(FrameworkID, self).__init__(**kwargs)
 
 
-class SlaveID(MessageProxy):
-    proto = mesos_pb2.SlaveID
+class SlaveID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(SlaveID, self).__init__(**kwargs)
 
 
-class ExecutorID(MessageProxy):
-    proto = mesos_pb2.ExecutorID
+class ExecutorID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(ExecutorID, self).__init__(**kwargs)
 
 
-class OfferID(MessageProxy):
-    proto = mesos_pb2.OfferID
+class AgentID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(AgentID, self).__init__(**kwargs)
 
 
-class TaskID(MessageProxy):
-    proto = mesos_pb2.TaskID
+class OfferID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(OfferID, self).__init__(**kwargs)
 
 
-class FrameworkInfo(MessageProxy):
-    proto = mesos_pb2.FrameworkInfo
+class TaskID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(TaskID, self).__init__(**kwargs)
 
 
-class ExecutorInfo(MessageProxy):
-    proto = mesos_pb2.ExecutorInfo
+class AgentInfo(Message):
+    pass
 
+
+class FrameworkInfo(Message):
+    pass
+
+
+class ExecutorInfo(Message):
     def __init__(self, id=None, **kwargs):
         super(ExecutorInfo, self).__init__(**kwargs)
         self.id = id or str(uuid4())
@@ -297,20 +352,21 @@ class ExecutorInfo(MessageProxy):
         self['executor_id'] = value
 
 
-class MasterInfo(MessageProxy):
-    proto = mesos_pb2.MasterInfo
+class MasterInfo(Message):
+    pass
 
 
-class SlaveInfo(MessageProxy):
-    proto = mesos_pb2.SlaveInfo
+class SlaveInfo(Message):
+    pass
 
 
-class Filters(MessageProxy):
-    proto = mesos_pb2.Filters
+class Filters(Message):
+    pass
 
 
-class TaskStatus(MessageProxy):
-    proto = mesos_pb2.TaskStatus
+class TaskStatus(Message):
+    def __init__(self, **kwargs):
+        super(TaskStatus, self).__init__(**kwargs)
 
     @property
     def task_id(self):  # more consistent naming
@@ -319,7 +375,7 @@ class TaskStatus(MessageProxy):
     @task_id.setter
     def task_id(self, value):
         if not isinstance(value, TaskID):
-            value = TaskID(value=value)
+            value = TaskID(value=value) if not isinstance(value, dict) else  TaskID(**value)
         self['task_id'] = value
 
     def is_staging(self):
@@ -348,61 +404,108 @@ class TaskStatus(MessageProxy):
         return self.has_succeeded() or self.has_failed()
 
 
-class Offer(ResourcesMixin, MessageProxy):  # important order!
-    proto = mesos_pb2.Offer
-
-
-class TaskInfo(ResourcesMixin, MessageProxy):
-    proto = mesos_pb2.TaskInfo
-
-    def __init__(self, id=None, **kwargs):
-        super(TaskInfo, self).__init__(**kwargs)
-        self.id = id or str(uuid4())
-        self.status = TaskStatus(task_id=self.id, state='TASK_STAGING')
+class Offer(ResourcesMixin, Message):  # important order!
+    def __init__(self, **kwargs):
+        super(Offer, self).__init__(**kwargs)
 
     @property
-    def id(self):  # more consistent naming
-        return self['task_id']
+    def framework_id(self):
+        return self['framework_id']
+
+    @framework_id.setter
+    def framework_id(self, value):
+        if not isinstance(value, (FrameworkID)):
+            value = FrameworkID(value=value) if not isinstance(value, dict) else  FrameworkID(**value)
+        self['framework_id'] = value
+
+    @property
+    def agent_id(self):
+        return self['agent_id']
+
+    @agent_id.setter
+    def agent_id(self, value):
+        if not isinstance(value, (AgentID, SlaveID)):
+            value = AgentID(value=value) if not isinstance(value, dict) else  AgentID(**value)
+        self['agent_id'] = value
+
+    @property
+    def id(self):
+        return self['id']
 
     @id.setter
     def id(self, value):
-        if not isinstance(value, TaskID):
-            value = TaskID(value=value)
-        self['task_id'] = value
+        if not isinstance(value, (OfferID)):
+            value = OfferID(value=value) if not isinstance(value, dict) else  OfferID(**value)
+        self['id'] = value
+
+    @property
+    def slave_id(self):
+        return self['agent_id']
+
+    @slave_id.setter
+    def slave_id(self, value):
+        if not isinstance(value, (AgentID, SlaveID)):
+            value = AgentID(value=value) if not isinstance(value, dict) else  AgentID(**value)
+        self['agent_id'] = value
 
 
-class CommandInfo(MessageProxy):
-    proto = mesos_pb2.CommandInfo
+class TaskInfo(ResourcesMixin, Message):
+    def __init__(self, task_id=None, **kwargs):
+        super(TaskInfo, self).__init__(**kwargs)
+        self.task_id = task_id or str(uuid4())
+        self.status = TaskStatus(task_id=self.task_id, state='TASK_STAGING')
+
+    # @property
+    # def id(self):  # more consistent naming
+    #     return self['task_id']
+    #
+    # @id.setter
+    # def id(self, value):
+    #     if not isinstance(value, TaskID):
+    #         value = TaskID(value=value)
+    #     self['task_id'] = value
+
+    @property
+    def slave_id(self):
+        return self['agent_id']
+
+    @slave_id.setter
+    def slave_id(self, value):
+        if not isinstance(value, (AgentID, SlaveID)):
+            value = AgentID(value=value)
+        self['agent_id'] = value
 
 
-class ContainerInfo(MessageProxy):
-    proto = mesos_pb2.ContainerInfo
-
-    class DockerInfo(MessageProxy):
-        proto = mesos_pb2.ContainerInfo.DockerInfo
-
-    class MesosInfo(MessageProxy):
-        proto = mesos_pb2.ContainerInfo.MesosInfo
+class CommandInfo(Message):
+    pass
 
 
-class Image(MessageProxy):
-    proto = mesos_pb2.Image
+class ContainerInfo(Message):
+    pass
 
-    class Appc(MessageProxy):
-        proto = mesos_pb2.Image.Appc
+    class DockerInfo(Message):
+        pass
 
-    class Docker(MessageProxy):
-        proto = mesos_pb2.Image.Docker
-
-
-class Request(MessageProxy):
-    proto = mesos_pb2.Request
+    class MesosInfo(Message):
+        pass
 
 
-class Operation(MessageProxy):
-    proto = mesos_pb2.Offer.Operation
+class Image(Message):
+    pass
+
+    class Appc(Message):
+        pass
+
+    class Docker(Message):
+        pass
 
 
-decode = partial(protobuf.decode, containers=MessageProxy.registry)
-encode = partial(protobuf.encode, containers=MessageProxy.registry,
-                 strict=False)
+class Request(Message):
+    pass
+
+
+class Operation(Message):
+    pass
+
+class DockerInfo(Message):
+    pass

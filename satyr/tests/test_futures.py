@@ -6,7 +6,7 @@ from collections import Iterator
 
 import pytest
 from satyr.apis.futures import Future, MesosPoolExecutor
-from satyr.proxies.messages import Cpus, Disk, Mem
+from satyr.messages.base import Cpus, Disk, Mem
 from satyr.utils import RemoteException, TimeoutError, timeout
 
 

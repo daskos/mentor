@@ -8,10 +8,10 @@ from functools import partial
 
 
 from satyr.constraint import pour
-from malefico.interface import Scheduler
+from mentos.interface import Scheduler
 from satyr.placement import bfd
-from satyr.proxies.messages import FrameworkInfo, TaskInfo, OfferID, Offer, SlaveID, TaskStatus
-from malefico.scheduler import SchedulerDriver
+from satyr.messages.base import FrameworkInfo, TaskInfo, OfferID, Offer, AgentID, TaskStatus
+from mentos.scheduler import SchedulerDriver
 from satyr.utils import Interruptable, timeout
 
 log = logging.getLogger(__name__)

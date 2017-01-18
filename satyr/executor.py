@@ -7,9 +7,9 @@ import threading
 import traceback
 from functools import partial
 
-from malefico.executor import ExecutorDriver
-from malefico.interface import Executor
-from satyr.messages import TaskStatus, PythonTaskStatus, TaskInfo, PythonTask
+from mentos.executor import ExecutorDriver
+from mentos.interface import Executor
+from satyr.messages.satyr import TaskStatus, PythonTaskStatus, TaskInfo, PythonTask
 from satyr.utils import Interruptable
 
 log = logging.getLogger(__name__)

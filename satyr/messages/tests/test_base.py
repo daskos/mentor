@@ -1,14 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
-                                    FrameworkInfo, Mem, Message,
-                                    Offer, ResourcesMixin,
-                                    ScalarResource, TaskID, TaskInfo,
-                                    TaskStatus)
+from satyr.messages.base import (CommandInfo, Cpus, Disk, FrameworkID,
+                                 FrameworkInfo, Mem,Scalar,ResourcesMixin,
+                                 Offer,
+                                 TaskID, TaskInfo,
+                                 TaskStatus)
 
-from tornado.escape import json_decode as decode
-from tornado.escape import json_encode as encode
 
 @pytest.fixture
 def d():
@@ -17,87 +15,6 @@ def d():
                   {'g': 7, 'h': 8}],
             'c': {'d': 4,
                   'e': {'f': 6}}}
-
-
-def test_Message_init(d):
-    m = Message(**d)
-    assert isinstance(m, Message)
-    assert isinstance(m, dict)
-
-
-def test_Message_get(d):
-    m = Message(**d)
-    assert m['a'] == 1
-    assert m['c']['e']['f'] == 6
-    assert m['b'][0]['j'] == 9
-    assert m['b'][1]['g'] == 7
-    assert isinstance(m['b'], list)
-    assert isinstance(m['b'][1], Message)
-
-
-def test_Message_dot_get(d):
-    m = Message(**d)
-    assert m.a == 1
-    assert m.c.e.f == 6
-    assert m.b[0].j == 9
-    assert m.b[1].g == 7
-    assert isinstance(m.b, list)
-    assert isinstance(m.b[1], Message)
-
-
-def test_Message_set(d):
-    m = Message(**d)
-    m['A'] = 11
-    m['a'] = 'one'
-    m['z'] = {'Z': {'omega': 20}}
-    assert m['a'] == 'one'
-    assert m['A'] == 11
-    assert m['z']['Z']['omega'] == 20
-    assert isinstance(m['z'], Message)
-    assert isinstance(m['z']['Z'], Message)
-
-
-def test_Message_dot_set(d):
-    m = Message(**d)
-    m.A = 11
-    m.a = 'one'
-    m.z = {'Z': {'omega': 20}}
-    assert m.a == 'one'
-    assert m.A == 11
-    assert m.z.Z.omega == 20
-    assert isinstance(m.z, Message)
-    assert isinstance(m.z.Z, Message)
-
-
-# def test_Message_set_missing(d):
-#     m = Message(**d)
-#     m['y']['o']['w'] = 9
-#     m.y.w.o = 6
-
-#     assert m['y']['o']['w'] == 9
-#     assert m.y.w.o == 6
-
-
-def test_hash():
-    d1 = Message(a=Message(b=3), c=5)
-    d2 = Message(a=Message(b=3), c=5)
-    d3 = Message(a=Message(b=6), c=5)
-
-    assert hash(d1) == hash(d2)
-    assert hash(d1) != hash(d3)
-    assert hash(d2) != hash(d3)
-
-
-def test_dict_hashing():
-    d2 = Message(a=Message(b=3), c=5)
-    d3 = Message(a=Message(b=6), c=5)
-
-    c = {}
-    c[d2.a] = d2
-    c[d3.a] = d3
-
-    assert c[d2.a] == d2
-    assert c[d3.a] == d3
 
 
 def test_encode_resources():
@@ -136,20 +53,19 @@ def test_framework_info():
     message = FrameworkInfo(id=FrameworkID(value='test'))
     wrapped = message
 
-    assert isinstance(wrapped, Message)
+
     assert isinstance(wrapped, FrameworkInfo)
-    assert isinstance(wrapped.id, Message)
     assert isinstance(wrapped.id, FrameworkID)
 
 
 def test_scalar_resource_comparison():
-    r1 = ScalarResource(value=11.5)
+    r1 = Scalar(value=11.5)
 
-    assert r1 == ScalarResource(value=11.5)
-    assert r1 <= ScalarResource(value=11.5)
-    assert r1 >= ScalarResource(value=11.5)
-    assert r1 < ScalarResource(value=12)
-    assert r1 > ScalarResource(value=11)
+    assert r1 == Scalar(value=11.5)
+    assert r1 <= Scalar(value=11.5)
+    assert r1 >= Scalar(value=11.5)
+    assert r1 < Scalar(value=12)
+    assert r1 > Scalar(value=11)
 
     assert r1 == 11.5
     assert r1 <= 11.5
@@ -159,73 +75,73 @@ def test_scalar_resource_comparison():
 
 
 def test_scalar_resource_addition():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
 
     s = r1 + r2
-    assert isinstance(s, ScalarResource)
-    assert s == ScalarResource(13.5)
+    assert isinstance(s, Scalar)
+    assert s == Scalar(13.5)
     assert s == 13.5
 
 
 def test_scalar_resource_sum():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-    r3 = ScalarResource(value=3)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
+    r3 = Scalar(value=3)
 
     s = sum([r1, r2, r3])
-    assert isinstance(s, ScalarResource)
-    assert s == ScalarResource(16.5)
+    assert isinstance(s, Scalar)
+    assert s == Scalar(16.5)
     assert s == 16.5
 
 
 def test_scalar_resource_subtraction():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
 
     s = r1 - r2
-    assert isinstance(s, ScalarResource)
-    assert s == ScalarResource(9.5)
+    assert isinstance(s, Scalar)
+    assert s == Scalar(9.5)
     assert s == 9.5
 
 
 def test_scalar_resource_inplace_addition():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
 
     r1 += r2
-    assert isinstance(r1, ScalarResource)
-    assert r1 == ScalarResource(13.5)
+    assert isinstance(r1, Scalar)
+    assert r1 == Scalar(13.5)
     assert r1 == 13.5
 
 
 def test_scalar_resource_inplace_subtraction():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
 
     r1 -= r2
-    assert isinstance(r1, ScalarResource)
-    assert r1 == ScalarResource(9.5)
+    assert isinstance(r1, Scalar)
+    assert r1 == Scalar(9.5)
     assert r1 == 9.5
 
 
 def test_scalar_resource_multiplication():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
 
     m = r1 * r2
-    assert isinstance(m, ScalarResource)
-    assert m == ScalarResource(23)
+    assert isinstance(m, Scalar)
+    assert m == Scalar(23)
     assert m == 23
 
 
 def test_scalar_resource_division():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
+    r1 = Scalar(value=11.5)
+    r2 = Scalar(value=2)
 
     d = r1 / r2
-    assert isinstance(d, ScalarResource)
-    assert d == ScalarResource(5.75)
+    assert isinstance(d, Scalar)
+    assert d == Scalar(5.75)
     assert d == 5.75
 
 
@@ -342,7 +258,7 @@ def test_resources_mixin_inplace_subtraction():
 
 def test_status_in_task_info():
     t = TaskInfo(name='test-task',
-                 id=TaskID(value='test-task-id'),
+                 task_id=TaskID(value='test-task-id'),
                  resources=[Cpus(0.1), Mem(16)],
                  command=CommandInfo(value='echo 100'))
 
@@ -373,7 +289,7 @@ def test_encode_task_info():
 
 def test_non_strict_encode_task_info():
     t = TaskInfo(name='test-task',
-                 id=TaskID(value='test-task-id'),
+                 task_id=TaskID(value='test-task-id'),
                  resources=[Cpus(0.1), Mem(16)],
                  command=CommandInfo(value='echo 100'))
     t.result = 'some binary data'

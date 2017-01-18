@@ -5,7 +5,7 @@ from functools import partial
 import pytest
 from satyr.constraint import has
 from satyr.messages import PythonExecutor, PythonTask, PythonTaskStatus
-from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID, Environment,
+from satyr.messages.base import (Cpus, Disk, Mem, Offer, OfferID, SlaveID, Environment,
                                  TaskID)
 from satyr.scheduler import QueueScheduler
 from malefico.scheduler import SchedulerDriver

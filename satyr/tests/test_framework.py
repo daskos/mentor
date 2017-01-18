@@ -4,7 +4,7 @@ import os
 
 import pytest
 from satyr .messages import PythonTask
-from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
+from satyr.messages.base import (CommandInfo, ContainerInfo, Cpus, Disk,
                                  Mem, TaskID, TaskInfo)
 from malefico.scheduler import MesosSchedulerDriver
 from satyr.scheduler import QueueScheduler

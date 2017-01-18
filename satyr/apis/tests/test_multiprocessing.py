@@ -5,7 +5,7 @@ import time
 import cloudpickle as cp
 import pytest
 from satyr.apis.multiprocessing import AsyncResult, Pool, Queue
-from satyr.proxies.messages import Cpus, Disk, Mem
+from satyr.messages.base import Cpus, Disk, Mem
 from satyr.utils import TimeoutError
 
 

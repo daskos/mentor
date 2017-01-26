@@ -1,9 +1,34 @@
 from __future__ import absolute_import, division, print_function
 
 import operator
-
+import types
 import attr
 from uuid import uuid4
+
+
+defaults ={
+    type(float()):0.0,
+    type(int()): 0,
+    type(str()): "",
+    type(bool()): False
+
+}
+
+
+def typed(cls, default=attr.NOTHING, validator=None, repr=True, cmp=True, hash=True, init=True, convert=None):
+
+    if cls == type(list()):
+        convert= lambda d: [d(**v)  if type(d) == type(dict()) else d if d else None for v in d]
+        if default == attr.NOTHING:
+           default = attr.Factory(list)
+    else:
+           def convert(d):
+               return cls(**d) if type(d) == type(dict()) else d if d!=None else defaults[cls]
+
+
+
+    return attr.ib(default=default, validator=validator,repr= repr,cmp=cmp,hash= hash, init=init, convert=convert)
+
 
 @attr.s(cmp=False)
 class ResourcesMixin(object):
@@ -118,9 +143,10 @@ class ResourcesMixin(object):
         return self
 
 
+
 @attr.s(cmp=False)
 class Scalar(object):
-    value = attr.ib(default=None)
+    value = typed(float)
 
     def __eq__(self, second):
         first, second = float(self), float(second)
@@ -192,8 +218,8 @@ class Scalar(object):
 
 @attr.s
 class Variable(object):
-    name = attr.ib(None)
-    value = attr.ib(None)
+    name  = typed(str)
+    value = typed(str)
 
 
 @attr.s

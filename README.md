@@ -7,8 +7,8 @@
 ###### aka. the distributed snake-charmer
 
 
-Satyr's intention is to simplify the process of writing python frameworks
-for Mesos. Satyr provides multiple components and interfaces to cover various
+Mentor's intention is to simplify the process of writing python frameworks
+for Mesos. Mentor provides multiple components and interfaces to cover various
 levels of complexity needs.
 
 ## Notable Features
@@ -164,7 +164,7 @@ class CustomScheduler(Scheduler):
 
 ## Optimized Task Placement
 
-Satyr implements multiple weighted heuristics to solve the
+Mentor implements multiple weighted heuristics to solve the
 [Bin-Packing Problem](https://en.wikipedia.org/wiki/Bin_packing_problem):
 
 - First-Fit

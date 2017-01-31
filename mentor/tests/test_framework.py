@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from satyr.messages import PythonTask
-from satyr.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
+from mentor.messages import PythonTask
+from mentor.proxies.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
                                     DockerInfo, Mem, TaskID, TaskInfo)
-from satyr.scheduler import QueueScheduler, Running
-from satyr.utils import RemoteException
+from mentor.scheduler import QueueScheduler, Running
+from mentor.utils import RemoteException
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def docker_command():
                     command=CommandInfo(value='echo 100'),
                     container=ContainerInfo(
                         type='DOCKER',
-                        docker=DockerInfo(image='lensa/satyr')))
+                        docker=DockerInfo(image='daskos/mentor')))
     return task
 
 

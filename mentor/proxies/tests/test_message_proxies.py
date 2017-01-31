@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 from mesos.interface import mesos_pb2
-from satyr.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
+from mentor.proxies.messages import (CommandInfo, Cpus, Disk, FrameworkID,
                                     FrameworkInfo, Map, Mem, MessageProxy,
                                     Offer, RegisterProxies, ResourcesMixin,
                                     ScalarResource, TaskID, TaskInfo,

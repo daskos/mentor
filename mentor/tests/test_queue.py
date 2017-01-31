@@ -5,24 +5,24 @@ from Queue import Empty
 
 import cloudpickle as cp
 import pytest
-from satyr.queue import LockingQueue, Queue
+from mentor.queue import LockingQueue, Queue
 
 
 def test_queue_put_get(zk):
-    queue = Queue(zk, '/satyr/putget')
+    queue = Queue(zk, '/mentor/putget')
     queue.put(cp.dumps(range(5)))
     assert cp.loads(queue.get()) == range(5)
 
 
 def test_locking_queue_put_get(zk):
-    queue = LockingQueue(zk, '/satyr/putget_locking')
+    queue = LockingQueue(zk, '/mentor/putget_locking')
     queue.put(cp.dumps(range(5)))
     assert queue.get() == cp.dumps(range(5))
     queue.consume()
 
 
 def test_queue_serde(zk):
-    queue = Queue(zk, '/satyr/serde')
+    queue = Queue(zk, '/mentor/serde')
     queue.put(cp.dumps({'a': 1, 'b': 2}))
     queue.put(cp.dumps({'c': 3}))
 
@@ -34,7 +34,7 @@ def test_queue_serde(zk):
 
 
 def test_locking_queue_serde(zk):
-    queue = LockingQueue(zk, '/satyr/serde_locking')
+    queue = LockingQueue(zk, '/mentor/serde_locking')
     queue.put(cp.dumps({'a': 1, 'b': 2}))
     queue.put(cp.dumps({'c': 3}))
 
@@ -48,7 +48,7 @@ def test_locking_queue_serde(zk):
 
 
 def test_queue_size(zk):
-    queue = Queue(zk, '/satyr/size')
+    queue = Queue(zk, '/mentor/size')
     assert queue.empty()
     assert queue.qsize() == 0
 
@@ -58,7 +58,7 @@ def test_queue_size(zk):
 
 
 def test_queue_blocking_get(zk):
-    queue = Queue(zk, '/satyr/blocking')
+    queue = Queue(zk, '/mentor/blocking')
 
     def delayed_put():
         import time

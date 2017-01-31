@@ -5,9 +5,9 @@ import time
 from collections import Iterator
 
 import pytest
-from satyr.apis.futures import Future, MesosPoolExecutor
-from satyr.proxies.messages import Cpus, Disk, Mem
-from satyr.utils import RemoteException, TimeoutError, timeout
+from mentor.apis.futures import Future, MesosPoolExecutor
+from mentor.proxies.messages import Cpus, Disk, Mem
+from mentor.utils import RemoteException, TimeoutError, timeout
 
 
 @pytest.fixture

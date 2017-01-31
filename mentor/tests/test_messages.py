@@ -2,9 +2,9 @@ from __future__ import absolute_import, division, print_function
 
 import cloudpickle
 from mesos.interface import mesos_pb2
-from satyr.messages import PythonTask, PythonTaskStatus
-from satyr.proxies.messages import TaskID, decode, encode
-from satyr.utils import RemoteException
+from mentor.messages import PythonTask, PythonTaskStatus
+from mentor.proxies.messages import TaskID, decode, encode
+from mentor.utils import RemoteException
 
 
 def test_python_task_status_decode():

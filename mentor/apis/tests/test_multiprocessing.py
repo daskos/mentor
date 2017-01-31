@@ -4,9 +4,9 @@ import time
 
 import cloudpickle as cp
 import pytest
-from satyr.apis.multiprocessing import AsyncResult, Pool, Queue
-from satyr.proxies.messages import Cpus, Disk, Mem
-from satyr.utils import TimeoutError
+from mentor.apis.multiprocessing import AsyncResult, Pool, Queue
+from mentor.proxies.messages import Cpus, Disk, Mem
+from mentor.utils import TimeoutError
 
 
 @pytest.fixture
@@ -61,7 +61,7 @@ def test_queue_apply_async(zk, resources):
     def feed(i, queue):
         queue.put(cp.dumps(i))
 
-    queue = Queue(zk, '/satyr/test-pool')
+    queue = Queue(zk, '/mentor/test-pool')
     with Pool(name='test-pool') as pool:
         results = [pool.apply_async(feed, [i, queue], resources=resources)
                    for i in range(5)]

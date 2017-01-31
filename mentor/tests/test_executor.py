@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
-from satyr.executor import OneOffExecutor, Running
-from satyr.messages import PythonTask, PythonTaskStatus
-from satyr.utils import RemoteException
+from mentor.executor import OneOffExecutor, Running
+from mentor.messages import PythonTask, PythonTaskStatus
+from mentor.utils import RemoteException
 
 
 class FakeThread(object):

@@ -1,6 +1,6 @@
 from mesos.interface import mesos_pb2
-from satyr.proxies import SchedulerDriverProxy, SchedulerProxy
-from satyr.proxies.messages import (Cpus, ExecutorID, Mem, OfferID, Operation,
+from mentor.proxies import SchedulerDriverProxy, SchedulerProxy
+from mentor.proxies.messages import (Cpus, ExecutorID, Mem, OfferID, Operation,
                                     Request, SlaveID, TaskInfo, TaskStatus)
 
 

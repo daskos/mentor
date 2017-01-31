@@ -5,15 +5,15 @@ from os.path import exists
 
 from setuptools import setup
 
-setup(name='satyr',
+setup(name='mentor',
       version='0.2.1',
       description='Extensible Python Framework for Apache Mesos',
-      url='http://github.com/lensacom/satyr',
+      url='http://github.com/daskos/mentor',
       maintainer='Krisztián Szűcs',
-      maintainer_email='krisztian.szucs@lensa.com',
+      maintainer_email='krisztian.szucs@daskos.com',
       license='Apache License, Version 2.0',
       keywords='mesos framework multiprocessing',
-      packages=['satyr', 'satyr.proxies', 'satyr.apis'],
+      packages=['mentor', 'mentor.proxies', 'mentor.apis'],
       long_description=(open('README.md').read() if exists('README.md')
                         else ''),
       install_requires=['cloudpickle', 'kazoo', 'futures'],

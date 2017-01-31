@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from satyr.utils import remote_exception
+from mentor.utils import remote_exception
 
 
 def test_remote_exception():

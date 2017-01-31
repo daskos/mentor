@@ -1,7 +1,7 @@
-[![Build Status](http://drone.lensa.com:8000/api/badges/lensacom/satyr/status.svg)](http://drone.lensa.com:8000/lensacom/satyr)
-[![Join the chat at https://gitter.im/lensacom/satyr](https://badges.gitter.im/lensacom/satyr.svg)](https://gitter.im/lensacom/satyr?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Build Status](http://drone.daskos.com:8000/api/badges/daskos/mentor/status.svg)](http://drone.daskos.com:8000/daskos/mentor)
+[![Join the chat at https://gitter.im/daskos/mentor](https://badges.gitter.im/daskos/mentor.svg)](https://gitter.im/daskos/mentor?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-![satyr](https://s3.amazonaws.com/lensa-rnd-misc/satyr2.png)
+![mentor](https://s3.amazonaws.com/daskos-rnd-misc/mentor2.png)
 
 # An extensible Mesos library for Python
 ###### aka. the distributed snake-charmer
@@ -21,7 +21,7 @@ levels of complexity needs.
 
 ## Install
 
-`pip install satyr` or use [lensa/satyr](https://hub.docker.com/r/lensa/satyr/) Docker image
+`pip install mentor` or use [daskos/mentor](https://hub.docker.com/r/daskos/mentor/) Docker image
 
 Requirements:
 - mesos.interface (installable via pip)
@@ -40,8 +40,8 @@ It's almost identical to python's
 but runs processes on a Mesos cluster (concurrently).
 
 ```python
-from satyr.apis.futures import MesosPoolExecutor
-from satyr.proxies.messages import Cpus, Mem
+from mentor.apis.futures import MesosPoolExecutor
+from mentor.proxies.messages import Cpus, Mem
 
 with MesosPoolExecutor(name='futures-pool') as executor:
     def mul(a, b):
@@ -63,10 +63,10 @@ but runs processes on a Mesos cluster (concurrently).
 
 ```python
 from __future__ import print_function
-from satyr.apis.multiprocessing import Pool
+from mentor.apis.multiprocessing import Pool
 
 
-with Pool(name='satyr-pool') as pool:
+with Pool(name='mentor-pool') as pool:
     def mul(a, b):
         return a * b
 
@@ -88,16 +88,16 @@ Basic scheduler to submit various kind of workloads, eg.:
 
 ```python
 from __future__ import print_function
-from satyr.scheduler import QueueScheduler, Running
-from satyr.messages import PythonTask
-from satyr.proxies.messages import Disk, Mem, Cpus
+from mentor.scheduler import QueueScheduler, Running
+from mentor.messages import PythonTask
+from mentor.proxies.messages import Disk, Mem, Cpus
 
 
 scheduler = QueueScheduler()
-task = PythonTask(fn=sum, args=[range(10)], name='satyr-task',
+task = PythonTask(fn=sum, args=[range(10)], name='mentor-task',
                   resources=[Cpus(0.1), Mem(128), Disk(512)])
 
-with Running(scheduler, name='satyr-scheduler'):
+with Running(scheduler, name='mentor-scheduler'):
     res = scheduler.submit(task)  # return AsyncResult
     print(res.get(timeout=30))
 ```
@@ -105,15 +105,15 @@ with Running(scheduler, name='satyr-scheduler'):
 ### Custom Scheduler
 
 You can make your own scheduler built on QueueScheduler or for more complex
-needs there's a [Scheduler](satyr/interface.py) interface which you can use
+needs there's a [Scheduler](mentor/interface.py) interface which you can use
 to create one from scratch. (However in this case you'll have to implement
-some of the functionalities already in [QueueScheduler](satyr/scheduler.py))
+some of the functionalities already in [QueueScheduler](mentor/scheduler.py))
 
 ```python
 from __future__ import print_function
-from satyr.scheduler import QueueScheduler, Running
-from satyr.messages import PythonTask
-from satyr.proxies.messages import Disk, Mem, Cpus
+from mentor.scheduler import QueueScheduler, Running
+from mentor.messages import PythonTask
+from mentor.proxies.messages import Disk, Mem, Cpus
 
 
 class CustomScheduler(QueueScheduler):
@@ -131,10 +131,10 @@ class CustomScheduler(QueueScheduler):
 
 
 scheduler = CustomScheduler()
-task = PythonTask(fn=sum, args=[range(9)], name='satyr-task',
+task = PythonTask(fn=sum, args=[range(9)], name='mentor-task',
                   resources=[Cpus(0.1), Mem(128), Disk(512)])
 
-with Running(scheduler, name='satyr-custom-scheduler'):
+with Running(scheduler, name='mentor-custom-scheduler'):
     res = scheduler.submit(task)
     print(res.get(timeout=60))
 ```
@@ -145,8 +145,8 @@ helping hand with comparable Offers and TaskInfos (basic arithmetic operators
 are also overloaded).
 
 ```python
-from satyr.interface import Scheduler
-from satyr.proxies.messages import Offer, TaskInfo
+from mentor.interface import Scheduler
+from mentor.proxies.messages import Offer, TaskInfo
 
 
 class CustomScheduler(Scheduler):
@@ -173,7 +173,7 @@ Satyr implements multiple weighted heuristics to solve the
 - Best-Fit
 - Best-Fit-Decreasing
 
-see [binpack.py](satyr/binpack.py).
+see [binpack.py](mentor/binpack.py).
 
 The benefits of using bin-packing has been proven by
 [Netflix/Fenzo](https://github.com/Netflix/Fenzo) in
@@ -188,24 +188,24 @@ value with `/bin/sh -c`. Also, if you want to run your task in a Docker
 container you can provide some additional information for the task.
 
 ```python
-from satyr.proxies.messages import TaskInfo, CommandInfo
+from mentor.proxies.messages import TaskInfo, CommandInfo
 
 
 task = TaskInfo(name='command-task', command=CommandInfo(value='echo 100'))
 task.container.type = 'DOCKER'
-task.container.docker.image = 'lensacom/satyr:latest'
+task.container.docker.image = 'daskos/mentor:latest'
 ```
 
 ### Python
 
-[PythonTask](/satyr/messages.py) is capable of running arbitrary python code on
+[PythonTask](/mentor/messages.py) is capable of running arbitrary python code on
 your cluster. It sends [cloudpickled](https://github.com/cloudpipe/cloudpickle)
 methods and arguments to the matched mesos-slave for execution.
-Note that python tasks run in [lensa/satyr](https://hub.docker.com/r/lensa/satyr/)
+Note that python tasks run in [daskos/mentor](https://hub.docker.com/r/daskos/mentor/)
 Docker container by default.
 
 ```python
-from satyr.messages import PythonTask
+from mentor.messages import PythonTask
 
 
 # You can pass a function or a lambda in place of sum for fn.
@@ -214,7 +214,7 @@ task = PythonTask(name='python-task', fn=sum, args=[range(5)])
 
 ## Custom Task
 
-Customs tasks can be written by extending [TaskInfo](/satyr/proxies/messages.py)
+Customs tasks can be written by extending [TaskInfo](/mentor/proxies/messages.py)
 or any existing descendants.
 If you're walking down the former path you'll most likely have to deal with
 protobuf in your code; worry not, we have some magic wrappers for you to provide
@@ -222,7 +222,7 @@ customizable messages.
 
 ```python
 from __future__ import print_function
-from satyr.proxies.messages import TaskInfo
+from mentor.proxies.messages import TaskInfo
 from mesos.interface import mesos_pb2
 
 

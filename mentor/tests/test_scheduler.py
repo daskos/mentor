@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from satyr.messages import PythonTask, PythonTaskStatus
-from satyr.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
+from mentor.messages import PythonTask, PythonTaskStatus
+from mentor.proxies.messages import (Cpus, Disk, Mem, Offer, OfferID, SlaveID,
                                     TaskID)
-from satyr.scheduler import QueueScheduler, Running
+from mentor.scheduler import QueueScheduler, Running
 
 
 @pytest.fixture

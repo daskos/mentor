@@ -1,6 +1,6 @@
 from mesos.interface import mesos_pb2
-from satyr.proxies import ExecutorDriverProxy, ExecutorProxy
-from satyr.proxies.messages import TaskStatus
+from mentor.proxies import ExecutorDriverProxy, ExecutorProxy
+from mentor.proxies.messages import TaskStatus
 
 
 def test_executor_event_handlers(mocker):

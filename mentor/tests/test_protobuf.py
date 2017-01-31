@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 from sample_pb2 import MessageOfTypes
-from satyr.protobuf import dict_to_protobuf, protobuf_to_dict
+from mentor.protobuf import dict_to_protobuf, protobuf_to_dict
 
 
 @pytest.fixture

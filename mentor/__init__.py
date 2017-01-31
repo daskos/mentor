@@ -7,7 +7,7 @@ from .executor import OneOffExecutor
 from .messages import PythonTask, PythonTaskStatus  # important to register classes
 
 
-__version__ = _pkg_resources.get_distribution('satyr').version
+__version__ = _pkg_resources.get_distribution('mentor').version
 
 __all__ = ('QueueScheduler',
            'OneOffExecutor',

@@ -21,7 +21,7 @@ levels of complexity needs.
 
 ## Install
 
-`pip install satyr` or use [lensa/satyr](https://hub.docker.com/r/lensa/satyr/) Docker image
+`pip install mentor` or use [lensa/satyr](https://hub.docker.com/r/lensa/satyr/) Docker image
 
 Requirements:
 - mesos.interface (installable via pip)

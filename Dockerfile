@@ -1,5 +1,5 @@
-FROM kszucs/miniconda-mesos
+FROM python:3.5.2-alpine
 
-ADD . /opt/satyr
-RUN pip --no-cache-dir install /opt/satyr \
-
+ADD . /mentor
+WORKDIR /mentor
+RUN pip install .

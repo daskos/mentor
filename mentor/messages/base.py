@@ -281,11 +281,3 @@ class TaskInfo(ResourcesMixin,Message):
             value = dict(value=value)
         self['task_id'] = value
 
-
-res=[{'name': 'cpus', 'type': 'SCALAR', 'scalar': {'value': 0.2}}, {'name': 'mem', 'type': 'SCALAR', 'scalar': {'value': 128}}]
-
-task_info = {'task_id': {'value': '39e762f5-9767-4d7d-b187-67029df5b151'}, 'agent_id': {'value': '7037ef03-cbef-4e11-aac6-d662a5ef4179-S1'}, 'name': 'task 39e762f5-9767-4d7d-b187-67029df5b151', 'executor': {'executor_id': {'value': 'MinimalExecutor'}, 'name': 'MinimalExecutor', 'command': {'value': '/opt/anaconda3/envs/mentos/bin/python /home/arti/workdir/mesos/dmentos/examples/executor.py'}, 'resources': [{'name': 'mem', 'type': 'SCALAR', 'scalar': {'value': 32}}, {'name': 'cpus', 'type': 'SCALAR', 'scalar': {'value': 0.1}}]}, 'data': 'SGVsbG8gZnJvbSB0YXNrIDM5ZTc2MmY1LTk3NjctNGQ3ZC1iMTg3LTY3MDI5ZGY1YjE1MSE=', 'resources': [{'name': 'cpus', 'type': 'SCALAR', 'scalar': {'value': 0.2}}, {'name': 'mem', 'type': 'SCALAR', 'scalar': {'value': 128}}]}
-
-TaskInfo.encode(task_info) + TaskInfo.encode(task_info)
-a=1
-pass

@@ -5,7 +5,7 @@ from mentor.messages.base import ( Cpus, Disk, TaskInfo,
                                    Mem, ScalarResource, ResourcesMixin,TaskStatus,
                                   Offer)
 
-
+import json
 @pytest.fixture
 def d():
     return {'a': 1,
@@ -291,3 +291,11 @@ def test_non_strict_encode_task_info():
     # TODO Whats the point of this?
     # with pytest.raises(AttributeError):
     #     p.status
+
+def test_json():
+    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+
+    t1 = TaskInfo.encode(dict(resources=[Cpus(0.5), Mem(128), Disk(0)]))
+
+    assert o1 == Offer.encode(json.loads(json.dumps(o1)))
+    assert t1 == TaskInfo.encode(json.loads(json.dumps(t1)))

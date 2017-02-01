@@ -125,14 +125,3 @@ class Message(dict,metaclass=RegisterProxies):
         else:
             return cls(x)
 
-    @classmethod
-    def decode(cls,x):
-        """ Recursively converts a Message into a dictionary.
-        """
-        if isinstance(x, dict):
-            return dict((k, decode(v)) for k, v in iteritems(x))
-        elif isinstance(x, (list, tuple)):
-            return type(x)(decode(v) for v in x)
-        else:
-            return x
-

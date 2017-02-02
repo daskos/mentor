@@ -1,9 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import pytest
-from mentor.messages.base import ( Cpus, Disk, TaskInfo,
-                                   Mem, ScalarResource, ResourcesMixin,TaskStatus,
-                                  Offer)
+from mentor.messages import ( TaskInfo,Offer)
 
 import json
 @pytest.fixture
@@ -15,21 +13,6 @@ def d():
                   'e': {'f': 6}}}
 
 
-def test_encode_resources():
-    pb = Cpus(0.1)
-    assert pb.scalar.value == 0.1
-    assert pb.name == 'cpus'
-    assert pb.type == "SCALAR"
-
-    pb = Mem(16)
-    assert pb.scalar.value == 16
-    assert pb.name == 'mem'
-    assert pb.type == "SCALAR"
-
-    pb = Disk(256)
-    assert pb.scalar.value == 256
-    assert pb.name == 'disk'
-    assert pb.type == "SCALAR"
 
 
 def test_task_info_resources():
@@ -47,100 +30,13 @@ def test_task_info_resources():
 
 
 
-def test_scalar_resource_comparison():
-    r1 = ScalarResource(value=11.5)
-
-    assert r1 == ScalarResource(value=11.5)
-
-    assert r1 >= ScalarResource(value=11.5)
-    assert r1 <= ScalarResource(value=11.5)
-    assert r1 < ScalarResource(value=12)
-    assert r1 > ScalarResource(value=11)
-
-    assert r1 == 11.5
-    assert r1 <= 11.5
-    assert r1 >= 11.5
-    assert r1 < 12
-    assert r1 > 11
-
-
-def test_scalar_resource_addition():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-
-    s = r1 + r2
-    assert isinstance(s, ScalarResource)
-    assert s == ScalarResource(13.5)
-    assert s == 13.5
-
-
-def test_scalar_resource_sum():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-    r3 = ScalarResource(value=3)
-
-    s = sum([r1, r2, r3])
-    assert isinstance(s, ScalarResource)
-    assert s == ScalarResource(16.5)
-    assert s == 16.5
-
-
-def test_scalar_resource_subtraction():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-
-    s = r1 - r2
-    assert isinstance(s, ScalarResource)
-    assert s == ScalarResource(9.5)
-    assert s == 9.5
-
-
-def test_scalar_resource_inplace_addition():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-
-    r1 += r2
-    assert isinstance(r1, ScalarResource)
-    assert r1 == ScalarResource(13.5)
-    assert r1 == 13.5
-
-
-def test_scalar_resource_inplace_subtraction():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-
-    r1 -= r2
-    assert isinstance(r1, ScalarResource)
-    assert r1 == ScalarResource(9.5)
-    assert r1 == 9.5
-
-
-def test_scalar_resource_multiplication():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-
-    m = r1 * r2
-    assert isinstance(m, ScalarResource)
-    assert m == ScalarResource(23)
-    assert m == 23
-
-
-def test_scalar_resource_division():
-    r1 = ScalarResource(value=11.5)
-    r2 = ScalarResource(value=2)
-
-    d = r1 / r2
-    assert isinstance(d, ScalarResource)
-    assert d == ScalarResource(5.75)
-    assert d == 5.75
-
 
 def test_resources_mixin_comparison():
     o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
     o2 = Offer(resources=[Cpus(2), Mem(256), Disk(1024)])
 
-    t1 = TaskInfo.encode(dict(resources=[Cpus(0.5), Mem(128), Disk(0)]))
-    t2 = TaskInfo.encode(dict(resources=[Cpus(1), Mem(256), Disk(512)]))
+    t1 = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+    t2 = TaskInfo(resources=[Cpus(1), Mem(256), Disk(512)]))
     t3 = TaskInfo.encode(dict(resources=[Cpus(0.5), Mem(256), Disk(512)]))
 
     assert o1.cpus == 1

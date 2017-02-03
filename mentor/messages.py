@@ -1,11 +1,5 @@
 import operator
 import copy
-a = {'agent_id': {'value': '4ddc596d-4dca-4e9d-a906-21cba8736ba5-S0'}, 'attributes': [{'name': 'mentos', 'text': {'value': 'true'}, 'type': 'TEXT'}], 'framework_id': {'value': '4ddc596d-4dca-4e9d-a906-21cba8736ba5-0001'}, 'hostname': 'malefico.io', 'id': {'value': '4ddc596d-4dca-4e9d-a906-21cba8736ba5-O6'}, 'resources': [{'name': 'cpus', 'role': '*', 'scalar': {'value': 0.5}, 'type': 'SCALAR'}, {'name': 'mem', 'role': '*', 'scalar': {'value': 128.0}, 'type': 'SCALAR'}, {'name': 'ports', 'ranges': {'range': [{'begin': 11000, 'end': 11999}]}, 'role': '*', 'type': 'RANGES'}, {'name': 'disk', 'role': '*', 'scalar': {'value': 0.0}, 'type': 'SCALAR'}], 'url': {'address': {'hostname': 'malefico.io', 'ip': '127.0.0.1', 'port': 5052}, 'path': '/slave(1)', 'scheme': 'http'}}
-
-
-b =  {'task_id': {'value': '987ede91-81f1-491c-a7db-1c8de54b8c92'}, 'agent_id': {'value': '4ddc596d-4dca-4e9d-a906-21cba8736ba5-S1'}, 'name': 'task 987ede91-81f1-491c-a7db-1c8de54b8c92', 'executor': {'executor_id': {'value': 'MinimalExecutor'}, 'name': 'MinimalExecutor', 'command': {'value': '/opt/anaconda3/envs/mentos/bin/python /home/arti/workdir/mesos/dmentos/examples/executor.py'}, 'resources': [{'name': 'mem', 'type': 'SCALAR', 'scalar': {'value': 32}}, {'name': 'cpus', 'type': 'SCALAR', 'scalar': {'value': 0.1}}]}, 'data': 'SGVsbG8gZnJvbSB0YXNrIDk4N2VkZTkxLTgxZjEtNDkxYy1hN2RiLTFjOGRlNTRiOGM5MiE=', 'resources': [{'name': 'cpus', 'type': 'SCALAR', 'scalar': {'value': 1}}, {'name': 'mem', 'type': 'SCALAR', 'scalar': {'value': 128}}]}
-
-
 import six
 
 # u('string') replaces the forwards-incompatible u'string'
@@ -101,6 +95,9 @@ def Mem(value):
 
 def Disk(value):
     return Message({'name': 'disk', 'role': '*', 'scalar': Message({'value':value}), 'type': 'SCALAR'})
+
+def Ports(begin,end):
+    return Message({'name': 'disk', 'role': '*', 'ranges': Message({'range':[Message({'begin': begin, 'end': end})]}), 'type': 'SCALAR'})
 
 
 class ResourceMixin(object):
@@ -210,6 +207,7 @@ class ResourceMixin(object):
         for res in self["resources"]:
             if res["name"]=="ports":
                 return [(rng["begin"], rng["end"]) for rng in res["ranges"]["range"]]
+        return Ports(0,0)
 
 
 class TaskInfo(ResourceMixin, Message):
@@ -218,14 +216,3 @@ class TaskInfo(ResourceMixin, Message):
 class Offer(ResourceMixin, Message):
     pass
 
-
-# A = Offer(a)
-# B = TaskInfo(b)
-#
-# #assert A != B  # False
-# # assert A > B   # False
-# # assert A <= B  # True
-# # assert A < B   # False
-# # assert A <= B  # False
-# A>B
-# a=A-B

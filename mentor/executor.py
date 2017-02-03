@@ -9,7 +9,7 @@ from functools import partial
 
 from mentos.executor import ExecutorDriver
 from mentos.interface import Executor
-from mentor.messages.satyr import  PythonTaskStatus, PythonTask
+#from mentor.messages.satyr import  PythonTaskStatus, PythonTask
 from mentor.utils import Interruptable
 
 log = logging.getLogger(__name__)

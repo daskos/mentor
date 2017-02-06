@@ -1,166 +1,145 @@
 from __future__ import absolute_import, division, print_function
 
-import pytest
-from mentor.messages import ( TaskInfo,Offer,ResourceMixin,Message,Cpus,Mem,Disk)
+import cloudpickle
 
-import json
-@pytest.fixture
-def d():
-    return {'a': 1,
-            'b': [{'j': 9},
-                  {'g': 7, 'h': 8}],
-            'c': {'d': 4,
-                  'e': {'f': 6}}}
+from mentor.messages.base import TaskID, TaskStatus, TaskInfo
+from mentor.messages import PythonTask, PythonTaskStatus
+from mentor.utils import RemoteException
 
 
-def test_task_info_resources():
-    task = TaskInfo(name='test-task',
-                    task_id=Message(value='test-task-id'),
-                    resources=[Cpus(0.1), Mem(16)],)
-    pb = task
-    assert pb.name == 'test-task'
-    assert pb.task_id.value == 'test-task-id'
-    assert pb.resources[0].name == 'cpus'
-    assert pb.resources[0].scalar.value == 0.1
-    assert pb.resources[1].name == 'mem'
-    assert pb.resources[1].scalar.value == 16
+# TODO Not working for some reason?
+def test_python_task_status_decode():
+    data = {'arbitrary': 'data', 'lst': [1, 2, 3]}
+    dumped = cloudpickle.dumps(data)
+
+    proto = TaskStatus(
+        data=dumped,
+        labels=[{"key": "python"}])
+
+    status = proto
+
+    assert isinstance(status, PythonTaskStatus)
+    assert status['data'] == dumped
+    assert status.data == data
+
+    proto = TaskStatus(
+        data=dumped,
+        labels=[{"key": "python"}])
+
+    status = proto
+    status.data = data
+    # TODO Not working for some reason?
+    assert isinstance(status, PythonTaskStatus)
+    assert status.data == data
+    assert status['data'] == dumped
 
 
+def test_python_task_status_encode():
+    data = {'arbitrary': 'data', 'value': 5}
+    dumped = cloudpickle.dumps(data)
+
+    status = PythonTaskStatus(task_id='test-id', state='TASK_STAGING',
+                              data=data)
+    proto = status
+    assert isinstance(proto, TaskStatus)
+    assert proto.data == dumped
+    assert proto.task_id.value == 'test-id'
+    assert proto.state == "TASK_STAGING"
+
+    status = PythonTaskStatus(task_id='test-id', state='TASK_RUNNING')
+    status.data = data
+    proto = status
+    assert isinstance(proto, TaskStatus)
+    assert proto.data == dumped
+    assert proto.task_id.value == 'test-id'
+    assert proto.state == "TASK_RUNNING"
 
 
+def test_python_task_decode():
+    fn, args, kwargs = sum, [range(5)], {}
+    data = (fn, args, kwargs)
+    dumped = cloudpickle.dumps(data)
 
-def test_resources_mixin_comparison():
-    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
-    o2 = Offer(resources=[Cpus(2), Mem(256), Disk(1024)])
+    proto = TaskInfo(
+        labels=[{"key": "python"}])
+    task = proto
 
-    t1 = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
-    t2 = TaskInfo(resources=[Cpus(1), Mem(256), Disk(512)])
-    t3 = TaskInfo(resources=[Cpus(0.5), Mem(256), Disk(512)])
+    assert isinstance(task, PythonTask)
+    assert task['data'] == dumped
+    assert task.data == data
 
-    assert o1.cpus.scalar.value == 1
-    assert o1.mem.scalar.value == 128
-    assert o2.cpus.scalar.value == 2
-    assert o2.disk.scalar.value == 1024
+    proto = TaskInfo(
+        labels=[{"key": "python"}])
+    task = proto
+    task.data = data
 
-    assert t1.cpus.scalar.value == 0.5
-    assert t1.mem.scalar.value == 128
-    assert t2.cpus.scalar.value == 1
-    assert t2.disk.scalar.value == 512
-
-    assert o1 == o1
-    assert o1 < o2
-    assert o1 <= o2
-    assert o2 > o1
-    assert o2 >= o1
-
-    assert t1 == t1
-    assert t1 < t2
-    assert t1 <= t2
-    assert t2 > t1
-    assert t2 >= t1
-
-    assert o1 >= t1
-    assert o2 >= t1
-    assert o2 >= t2
-    assert t2 >= o1
-
-    assert t3 > o1
-    assert t3 <= t2
-    assert t3 > t1
+    assert isinstance(task, PythonTask)
+    assert task.data == data
+    assert task['data'] == dumped
 
 
-def test_resources_mixin_addition():
-    o = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
-    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+def test_python_task_encode():
+    fn, args, kwargs = sum, [range(5)], {}
+    data = (fn, args, kwargs)
+    dumped = cloudpickle.dumps(data)
 
-    s = o + t
-    assert isinstance(s, ResourceMixin)
-    assert s.cpus == Cpus(1.5)
-    assert s.cpus.scalar.value == 1.5
-    assert s.mem == Mem(256)
-    assert s.mem.scalar.value == 256
-    assert s.disk == Disk(0)
-    assert s.disk.scalar.value == 0
+    task = PythonTask(fn=fn, args=args, kwargs=kwargs,
+                      id='test-id',
+                      envs={'TEST': 'value'},
+                      uris=['test_dependency'])
 
+    proto = task
+    assert isinstance(proto, TaskInfo)
+    assert proto.data == dumped
+    assert proto.task_id.value == 'test-id'
+    assert proto.executor.command.uris[0].value == 'test_dependency'
+    assert proto.executor.command.environment.variables[0].name == 'TEST'
+    assert proto.executor.command.environment.variables[0].value == 'value'
 
-def test_resources_mixin_sum():
-    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
-    o2 = Offer(resources=[Cpus(2), Mem(128), Disk(100)])
-    o3 = Offer(resources=[Cpus(0.5), Mem(256), Disk(200)])
-
-    s = sum([o1, o2, o3])
-    assert isinstance(s, ResourceMixin)
-    assert s.cpus == Cpus(3.5)
-    assert s.cpus.scalar.value == 3.5
-    assert s.mem == Mem(512)
-    assert s.mem.scalar.value == 512
-    assert s.disk == Disk(300)
-    assert s.disk.scalar.value == 300
+    task = PythonTask(id=TaskID(value='test-id'))
+    task.data = data
+    proto = task
+    assert isinstance(proto, TaskInfo)
+    assert proto.data == dumped
+    assert proto.task_id.value == 'test-id'
 
 
-def test_resources_mixin_subtraction():
-    o = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
-    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+def test_python_task_execution():
+    fn, args, kwargs = sum, [range(5)], {}
+    task = PythonTask(fn=fn, args=args, kwargs=kwargs,
+                      id='test-id')
+    assert task() == 10
 
-    s = o - t
-    assert isinstance(s, ResourceMixin)
-    assert s.cpus == Cpus(0.5)
-    assert s.cpus.scalar.value == 0.5
-    assert s.mem == Mem(0)
-    assert s.mem.scalar.value == 0
-    assert s.disk == Disk(0)
-    assert s.disk.scalar.value == 0
-
-
-def test_resources_mixin_inplace_addition():
-    o = Offer(resources=[Cpus(1), Mem(128), Disk(64)])
-    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
-
-    o += t
-    assert isinstance(o, Offer)
-    assert o.cpus == Cpus(1.5)
-    assert o.cpus.scalar.value == 1.5
-    assert o.mem == Mem(256)
-    assert o.mem.scalar.value == 256
-    assert o.disk == Disk(64)
-    assert o.disk.scalar.value == 64
+    def fn(lst1, lst2):
+        return sum(lst1) - sum(lst2)
+    args = [range(5), range(3)]
+    task = PythonTask(fn=fn, args=args, id='test-id')
+    task = task
+    assert task() == 7
 
 
-def test_resources_mixin_inplace_subtraction():
-    o = Offer(resources=[Cpus(1), Mem(128), Disk(64)])
-    t = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
+def test_python_task_contains_status():
+    fn, args, kwargs = sum, [range(5)], {}
 
-    o -= t
-    assert isinstance(o, Offer)
-    assert o.cpus == Cpus(0.5)
-    assert o.cpus.scalar.value == 0.5
-    assert o.mem == Mem(0)
-    assert o.mem.scalar.value == 0
-    assert o.disk == Disk(64)
-    assert o.disk.scalar.value == 64
+    task = PythonTask(fn=fn, args=args, kwargs=kwargs,
+                      id='test-id',
+                      envs={'TEST': 'value'},
+                      uris=['test_dependency'])
 
+    assert isinstance(task.status, PythonTaskStatus)
+    assert task.status.state == 'TASK_STAGING'
 
+    new_status = PythonTaskStatus(task_id=task.id, state='TASK_RUNNING')
+    task.update(new_status)
 
-
-def test_encode_task_info():
-    t = TaskInfo(name='test-task',
-                 task_id=Message(value='test-task-id'),
-                 resources=[Cpus(0.1), Mem(16)],
-                 command=Message(value='echo 100'))
-
-    p = t
-    assert isinstance(p, TaskInfo)
-    assert p.command.value == 'echo 100'
-    assert p.name == 'test-task'
-    assert p.resources[0].name == 'cpus'
-    assert p.resources[0].scalar.value == 0.1
-    assert p.task_id.value == 'test-task-id'
+    assert isinstance(task.status, PythonTaskStatus)
+    assert task.status.state == 'TASK_RUNNING'
 
 
-def test_json():
-    o1 = Offer(resources=[Cpus(1), Mem(128), Disk(0)])
+def test_python_task_status_exception():
+    status = PythonTaskStatus(task_id=TaskID(value='e'),
+                              state='TASK_FAILED')
+    status.data = (TypeError('test'), 'traceback')
 
-    t1 = TaskInfo(resources=[Cpus(0.5), Mem(128), Disk(0)])
-
-    assert o1 == Offer(json.loads(json.dumps(o1)))
-    assert t1 == TaskInfo(json.loads(json.dumps(t1)))
+    assert isinstance(status.exception, RemoteException)
+    assert isinstance(status.exception, TypeError)

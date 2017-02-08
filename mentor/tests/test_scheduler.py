@@ -4,16 +4,15 @@ from functools import partial
 
 import pytest
 from mentor.constraint import has
-from mentor.messages import PythonExecutor, PythonTask, PythonTaskStatus
-from mentor.messages.base import (Cpus, Disk, Mem, Offer, OfferID, SlaveID, Environment,
-                                  TaskID)
+from mentor.messages import PythonExecutor, PythonTask, PythonTaskStatus,Message
+from mentor.messages import (Cpus, Disk, Mem, Offer)
 from mentor.scheduler import QueueScheduler
-from malefico.scheduler import SchedulerDriver
+from mentos.scheduler import SchedulerDriver
 
 
 @pytest.fixture
 def python_task():
-    task = PythonTask(id=TaskID(value='test-task-id'),
+    task = PythonTask(task_id=Message(value='test-task-id'),
                       fn=sum, args=[range(5)],
                       resources=[Cpus(0.1), Mem(128), Disk(0)])
     return task
@@ -21,11 +20,11 @@ def python_task():
 
 @pytest.fixture
 def offers():
-    o1 = Offer(id=OfferID(value='first-offer'),
-               slave_id=SlaveID(value='test-slave'),
+    o1 = Offer(id=Message(value='first-offer'),
+               slave_id=Message(value='test-slave'),
                resources=[Cpus(2), Mem(256), Disk(1024)])
-    o2 = Offer(id=OfferID(value='second-offer'),
-               slave_id=SlaveID(value='test-slave'),
+    o2 = Offer(id=Message(value='second-offer'),
+               slave_id=Message(value='test-slave'),
                resources=[Cpus(1), Mem(1024), Disk(2048)])
     return [o1, o2]
 
@@ -40,13 +39,13 @@ def test_launch_decline(mocker, python_task, offers):
     calls = driver.launch.call_args_list
 
     args, kwargs = calls[0]
-    assert isinstance(args[0], OfferID)
+    assert isinstance(args[0], Message)
     assert args[0].value == 'first-offer'
     assert isinstance(args[1][0], PythonTask)
-    assert args[1][0].task_id.value == 'test-task-id'
+    assert args[1][0].task_id.value != None
 
     args, kwargs = calls[1]
-    assert isinstance(args[0], OfferID)
+    assert isinstance(args[0], Message)
     assert args[0].value == 'second-offer'
     assert args[1] == []  # declines via launch empty task list
 
@@ -60,10 +59,10 @@ def test_task_callbacks(mocker, python_task, offers):
     sched.submit(python_task)
     sched.on_offers(driver, offers)
 
-    status = PythonTaskStatus(task_id=python_task.id, state='TASK_RUNNING')
+    status = PythonTaskStatus(task_id=python_task.task_id, state='TASK_RUNNING')
     sched.on_update(driver, status)
 
-    status = PythonTaskStatus(task_id=python_task.id, state='TASK_FINISHED',
+    status = PythonTaskStatus(task_id=python_task.task_id, state='TASK_FINISHED',
                               data=python_task())
     sched.on_update(driver, status)
 
@@ -81,7 +80,7 @@ def test_task_callbacks(mocker, python_task, offers):
     args, kwargs = success_calls[0]
     assert isinstance(args[0], PythonTaskStatus)
     assert args[0].state == 'TASK_FINISHED'
-    assert args[0].data == 10
+    assert args[0].result == 10
 
 
 def test_task_result(mocker, python_task, offers):
@@ -91,15 +90,15 @@ def test_task_result(mocker, python_task, offers):
     sched.submit(python_task)
     sched.on_offers(driver, offers)
 
-    status = PythonTaskStatus(task_id=python_task.id, state='TASK_RUNNING')
+    status = PythonTaskStatus(task_id=python_task.task_id, state='TASK_RUNNING')
     sched.on_update(driver, status)
 
-    status = PythonTaskStatus(task_id=python_task.id, state='TASK_FINISHED',
+    status = PythonTaskStatus(task_id=python_task.task_id, state='TASK_FINISHED',
                               data=python_task())
     sched.on_update(driver, status)
 
     assert python_task.status.state == 'TASK_FINISHED'
-    assert python_task.status.data == 10
+    assert python_task.status.result == 10
 
 
 def test_runner_context_manager():
@@ -111,15 +110,17 @@ def test_runner_context_manager():
 
 
 def test_scheduler_retries(mocker):
-    task = PythonTask(id=TaskID(value='non-existing-docker-image'), name='test',
+    task = PythonTask(id=Message(value='non-existing-docker-image'), name='test',
                       fn=lambda: range(int(10e10)), resources=[Cpus(0.1), Mem(128), Disk(0)],
-                      executor=PythonExecutor(docker='pina/sen', envs={'HOME': '/tmp'}))
+                      executor=PythonExecutor(id="test-executor",docker='pina/sen', envs={'HOME': '/tmp'}))
     sched = QueueScheduler()
 
     mocker.spy(sched, 'on_update')
-    with SchedulerDriver(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler') as driver:
         sched.submit(task)
         sched.wait()
+
+
 
     assert sched.on_update.call_count == 3
 
@@ -137,6 +138,7 @@ def test_scheduler_constraints(mocker):
 
     with SchedulerDriver(sched, name='test-scheduler') as driver:
         sched.submit(task)
+
         sched.wait()
 
     # TODO check scheduled with the proper offer

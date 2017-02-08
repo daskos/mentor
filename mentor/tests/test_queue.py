@@ -5,7 +5,7 @@ from six.moves.queue import Empty
 
 import cloudpickle as cp
 import pytest
-from mentor.queue import LockingQueue, Queue
+from mentor.queues import LockingQueue, Queue
 
 
 def test_queue_put_get(zk):

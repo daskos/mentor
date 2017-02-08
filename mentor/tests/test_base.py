@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 import cloudpickle
 
-from mentor.messages.base import TaskID, TaskStatus, TaskInfo
-from mentor.messages import PythonTask, PythonTaskStatus
+from mentor.messages import TaskInfo,Message
+from mentor.messages import PythonTask, PythonTaskStatus,PythonExecutor
 from mentor.utils import RemoteException
 
 
@@ -12,25 +12,25 @@ def test_python_task_status_decode():
     data = {'arbitrary': 'data', 'lst': [1, 2, 3]}
     dumped = cloudpickle.dumps(data)
 
-    proto = TaskStatus(
+    proto = PythonTaskStatus(
         data=dumped,
         labels=[{"key": "python"}])
 
     status = proto
 
-    assert isinstance(status, PythonTaskStatus)
+    assert isinstance(status, Message)
     assert status['data'] == dumped
-    assert status.data == data
+    assert status.cdata == data
 
-    proto = TaskStatus(
+    proto = Message(
         data=dumped,
         labels=[{"key": "python"}])
 
     status = proto
-    status.data = data
+    status.cdata = data
     # TODO Not working for some reason?
-    assert isinstance(status, PythonTaskStatus)
-    assert status.data == data
+    assert isinstance(status, Message)
+    assert status.cdata == data
     assert status['data'] == dumped
 
 
@@ -38,18 +38,18 @@ def test_python_task_status_encode():
     data = {'arbitrary': 'data', 'value': 5}
     dumped = cloudpickle.dumps(data)
 
-    status = PythonTaskStatus(task_id='test-id', state='TASK_STAGING',
+    status = PythonTaskStatus(task_id=Message(value='test-id'), state='TASK_STAGING',
                               data=data)
     proto = status
-    assert isinstance(proto, TaskStatus)
-    assert proto.data == dumped
+    assert isinstance(proto, PythonTaskStatus)
+    assert proto.data == data
     assert proto.task_id.value == 'test-id'
     assert proto.state == "TASK_STAGING"
 
     status = PythonTaskStatus(task_id='test-id', state='TASK_RUNNING')
     status.data = data
     proto = status
-    assert isinstance(proto, TaskStatus)
+    assert isinstance(proto, PythonTaskStatus)
     assert proto.data == dumped
     assert proto.task_id.value == 'test-id'
     assert proto.state == "TASK_RUNNING"
@@ -84,7 +84,7 @@ def test_python_task_encode():
     dumped = cloudpickle.dumps(data)
 
     task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                      id='test-id',
+                      task_id='test-id',
                       envs={'TEST': 'value'},
                       uris=['test_dependency'])
 
@@ -96,7 +96,7 @@ def test_python_task_encode():
     assert proto.executor.command.environment.variables[0].name == 'TEST'
     assert proto.executor.command.environment.variables[0].value == 'value'
 
-    task = PythonTask(id=TaskID(value='test-id'))
+    task = PythonTask(id=Message(value='test-id'))
     task.data = data
     proto = task
     assert isinstance(proto, TaskInfo)
@@ -137,7 +137,7 @@ def test_python_task_contains_status():
 
 
 def test_python_task_status_exception():
-    status = PythonTaskStatus(task_id=TaskID(value='e'),
+    status = PythonTaskStatus(task_id=Message(value='e'),
                               state='TASK_FAILED')
     status.data = (TypeError('test'), 'traceback')
 

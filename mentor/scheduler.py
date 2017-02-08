@@ -10,7 +10,7 @@ from functools import partial
 from mentor.constraint import pour
 from mentos.interface import Scheduler
 from mentor.placement import bfd
-#from mentor.messages.base import  OfferID, Offer
+from mentor.messages import  TaskInfo,Offer,Message
 from mentos.scheduler import SchedulerDriver
 from mentor.utils import Interruptable, timeout
 
@@ -57,15 +57,15 @@ class Framework(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-        self.tasks[task.task_id] = task
+        self.tasks[task.task_id.value] = task
 
     def on_offers(self, driver, offers):
-        offers = [Offer(**f) for f in offers]
+        offers = [Offer(f) for f in offers]
         log.info('Received offers: {}'.format(sum(offers)))
         self.report()
 
         # query tasks ready for scheduling
-        staging = [self.tasks[status.task_id]
+        staging = [self.tasks[status.task_id.value]
                    for status in self.statuses.values() if status.is_staging()]
 
         # filter acceptable offers
@@ -82,17 +82,17 @@ class Framework(Scheduler):
         for offer, tasks in bins:
             try:
                 for task in tasks:
-                    task.slave_id = offer.slave_id
+                    task.agent_id = offer.agent_id
                     task.status.state = 'TASK_STARTING'
                 # running with empty task list will decline the offer
                     log.info('launches {}'.format(tasks))
                 driver.launch(offer.id, tasks)
-            except Exception:
+            except Exception as ex:
                 log.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
-        status = TaskStatus(**status)
-        task = self.tasks[status.task_id]
+        #status = Message(**status)
+        task = self.tasks[status.task_id.value]
         log.info('Updated task {} state to {}'.format(status.task_id,
                                                       status.state))
         try:
@@ -103,9 +103,15 @@ class Framework(Scheduler):
             raise
         finally:
             if status.has_terminated():
-                del self.tasks[task.task_id]
+                del self.tasks[task.task_id.value]
 
         self.report()
+
+    def on_outbound_success(self, driver, request):
+        pass
+
+    def on_outbound_error(self, driver, request, endpoint, error):
+        pass
 
 
 # backward compatibility

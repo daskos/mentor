@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from malefico.executor import ExecutorDriver
+from mentos.executor import ExecutorDriver
 from mentor.executor import ThreadExecutor
 from mentor.messages import PythonTask, PythonTaskStatus
 from mentor.utils import RemoteException
@@ -68,7 +68,7 @@ def test_failed_status_updates(mocker):
     assert isinstance(status.data, tuple)
     assert isinstance(status.exception, RemoteException)
 
-    assert status.message == 'Booom!'
+    assert status.message == "Exception('Booom!',)"
 
 
 # def test_runner_context_manager():

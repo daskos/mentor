@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 from mentor.placement import bf, bfd, ff, ffd, mr, weight
-from mentor.messages.base import Cpus, Mem, Offer, TaskInfo
+from mentor.messages import Cpus, Mem, Offer, TaskInfo
 
 
 @pytest.fixture

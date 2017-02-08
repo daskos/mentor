@@ -4,9 +4,11 @@ import six
 import cloudpickle
 from .utils import remote_exception
 import logging
+from uuid import uuid4
+from mentos.utils import decode_data,encode_data
 log = logging.getLogger(__name__)
 
-
+logging.getLogger().setLevel(logging.DEBUG)
 # u('string') replaces the forwards-incompatible u'string'
 if six.PY3:
     def u(string):
@@ -25,9 +27,24 @@ else:
     iteritems = dict.iteritems
     iterkeys = dict.iterkeys
 
+def bunchify(x):
+    """ Recursively transforms a dictionary into a Message via copy.
+
+    """
+
+
 class Message(dict):
     """ A dictionary that provides attribute-style access.
     """
+    @classmethod
+    def convert(cls,x):
+        if isinstance(x, dict):
+            return cls((k, cls.convert(v)) for k, v in iteritems(x))
+        elif isinstance(x, (list, tuple)):
+            return type(x)(cls.convert(v) for v in x)
+        else:
+            return x
+
 
     def __contains__(self, k):
         """
@@ -112,7 +129,10 @@ class ResourceMixin(object):
     @staticmethod
     def flatten(message):
         flattened = {}
-        for r in message['resources']:
+        if  isinstance(message, (int, float, complex)):
+            val = message
+            message = {"resources":[Cpus(val),Disk(val),Mem(val)]}
+        for r in message["resources"]:
             if r["type"]=="RANGES":
                 flattened[r['name']] = r['ranges']['range']
             else:
@@ -190,21 +210,21 @@ class ResourceMixin(object):
     def cpus(self):
         for res in self.resources:
             if res["name"] == "cpus":
-                return res
+                return Message.convert(res)
         return Cpus(0.0)
 
     @property
     def mem(self):
         for res in self["resources"]:
             if res["name"] == "mem":
-                return res
+                return Message.convert(res)
         return Mem(0.0)
 
     @property
     def disk(self):
         for res in self["resources"]:
             if res["name"] == "disk":
-                return res
+                return Message.convert(res)
         return Disk(0.0)
 
     @property
@@ -218,28 +238,35 @@ class ResourceMixin(object):
 class TaskInfo(ResourceMixin, Message):
     pass
 
+
+
 class Offer(ResourceMixin, Message):
-    pass
-
-
-
-class PickleMixin(object):
+    @property
+    def slave_id(self):
+        try:
+            return self["slave_id"]
+        except KeyError:
+            return self["agent_id"]
 
     @property
-    def data(self):
-        return cloudpickle.loads(self['data'])
+    def agent_id(self):
+        try:
+            return self["agent_id"]
+        except KeyError:
+            return self["slave_id"]
 
-    @data.setter
-    def data(self, value):
-        self['data'] = cloudpickle.dumps(value)
 
 
-class PythonTaskStatus(PickleMixin, Message):
+class PythonTaskStatus(Message):
 
     def __init__(self, data=None, **kwargs):
         super(PythonTaskStatus, self).__init__(**kwargs)
         self.labels = Message(labels=Message(key='python'))
-        self.data = data
+        self.data = encode_data(cloudpickle.dumps(data))
+
+    @property
+    def result(self):
+        return cloudpickle.loads(decode_data(self["data"]))
 
     @property
     def exception(self):
@@ -248,18 +275,43 @@ class PythonTaskStatus(PickleMixin, Message):
         except:
             return None
 
+    def is_staging(self):
+        return self.state == 'TASK_STAGING'
+
+    def is_starting(self):
+        return self.state == 'TASK_STARTING'
+
+    def is_running(self):
+        return self.state == 'TASK_RUNNING'
+
+    def has_finished(self):
+        return self.state == 'TASK_FINISHED'
+
+    def has_succeeded(self):
+        return self.state == 'TASK_FINISHED'
+
+    def has_killed(self):
+        return self.state == 'TASK_KILLED'
+
+    def has_failed(self):
+        return self.state in ['TASK_FAILED', 'TASK_LOST', 'TASK_KILLED',
+                              'TASK_ERROR']
+
+    def has_terminated(self):
+        return self.has_succeeded() or self.has_failed()
 
 # TODO create custom messages per executor
-class PythonTask(PickleMixin, TaskInfo):
+class PythonTask(TaskInfo):
 
      
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  executor=None, retries=3, **kwds):
         super(PythonTask, self).__init__(**kwds)
-        self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
-        self.executor = executor or PythonExecutor()
-        self.data = (fn, args, kwargs)
+        self.task_id  = self.get("task_id",  Message(value=str(uuid4())))
+        self.status = PythonTaskStatus(task_id=self.task_id, state='TASK_STAGING')
+        self.executor = executor or PythonExecutor("python-executor")
+        self.data = encode_data(cloudpickle.dumps(self.get("data",(fn, args, kwargs))))
         self.resources = resources
         self.retries = retries
         self.attempt = 1
@@ -267,22 +319,22 @@ class PythonTask(PickleMixin, TaskInfo):
         self.labels = Message(labels=Message(key='python'))
 
     def __call__(self):
-        fn, args, kwargs = self.data
+        fn, args, kwargs = cloudpickle.loads(decode_data(self.data))
         return fn(*args, **kwargs)
 
     def retry(self, status):
         if self.attempt < self.retries:
             log.info('Task {} attempt #{} rescheduled due to failure with state '
-                         '{} and message {}'.format(self.id, self.attempt,
+                         '{} and message {}'.format(self.task_id, self.attempt,
                                                     status.state, status.message))
             self.attempt += 1
             status.state = 'TASK_STAGING'
         else:
             log.error('Aborting due to task {} failed for {} attempts in state '
-                          '{} with message {}'.format(self.id, self.retries,
+                          '{} with message {}'.format(self.task_id, self.retries,
                                                       status.state, status.message))
             raise RuntimeError('Task {} failed with state {} and message {}'.format(
-                self.id, status.state, status.message))
+                self.task_id, status.state, status.message))
 
     def update(self, status):
         self.on_update(status)
@@ -294,14 +346,14 @@ class PythonTask(PickleMixin, TaskInfo):
     def on_update(self, status):
         self.status = status  # update task's status
         log.info('Task {} has been updated with state {}'.format(
-            self.id.value, status.state))
+            self.task_id.value, status.state))
 
     def on_success(self, status):
-        log.info('Task {} has been succeded'.format(self.id.value))
+        log.info('Task {} has been succeded'.format(self.task_id.value))
 
     def on_fail(self, status):
         log.error('Task {} has been failed with state {} due to {}'.format(
-            self.id.value, status.state, status.message))
+            self.task_id.value, status.state, status.message))
 
         try:
             raise status.exception  # won't retry due to code error in PythonTaskStatus
@@ -310,14 +362,14 @@ class PythonTask(PickleMixin, TaskInfo):
             self.retry(status)
         else:
             log.error('Aborting due to task {} failed with state {} and message '
-                          '{}'.format(self.id, status.state, status.message))
+                          '{}'.format(self.task_id, status.state, status.message))
 
 
 class PythonExecutor(Message):
 
  
 
-    def __init__(self, docker='satyr', force_pull=False,
+    def __init__(self, id, docker='satyr', force_pull=False,
                  envs={}, uris=[], **kwds):
         super(PythonExecutor, self).__init__(**kwds)
         self.container = Message(
@@ -325,6 +377,7 @@ class PythonExecutor(Message):
             mesos=Message(
                 image=Message(type='DOCKER',
                             docker=Message(name=docker))))
+        self.executor_id = Message(value=id)
         self.command = Message(value='python -m satyr.executor',
                                    shell=True)
         self.force_pull = force_pull

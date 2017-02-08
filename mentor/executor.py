@@ -9,7 +9,7 @@ from functools import partial
 
 from mentos.executor import ExecutorDriver
 from mentos.interface import Executor
-#from mentor.messages.satyr import  PythonTaskStatus, PythonTask
+from mentor.messages import  PythonTaskStatus, PythonTask
 from mentor.utils import Interruptable
 
 log = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class ThreadExecutor(Executor):
             driver.update(status)
             log.info('Sent TASK_FINISHED status update')
         finally:
-            del self.tasks[task.task_id]
+            del self.tasks[task.task_id.value]
             if self.is_idle():  # no more tasks left
                 log.info('Executor stops due to no more executing '
                          'tasks left')
@@ -57,7 +57,7 @@ class ThreadExecutor(Executor):
         task = PythonTask(**task)
         thread = threading.Thread(target=self.run, args=(driver, task))
         # track tasks runned by this executor
-        self.tasks[task.task_id] = thread
+        self.tasks[task.task_id.value] = thread
         thread.start()
 
     def on_kill(self, driver, task_id):
@@ -66,6 +66,11 @@ class ThreadExecutor(Executor):
     def on_shutdown(self, driver):
         driver.stop()
 
+    def on_outbound_success(self, driver, request):
+            pass
+
+    def on_outbound_error(self,  driver, request, endpoint, error):
+            pass
 
 class ProcessExecutor(ThreadExecutor):
 
@@ -88,6 +93,11 @@ class ProcessExecutor(ThreadExecutor):
                      'tasks left')
             driver.stop()
 
+    def on_outbound_success(self, driver, event):
+        pass
+
+    def on_outbound_error(self, driver, event):
+        pass
 
 if __name__ == '__main__':
     import logging

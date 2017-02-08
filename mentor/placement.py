@@ -8,7 +8,10 @@ def weight(items, **kwargs):
         raise ValueError('Missing attribute for weighting items!')
     scaled = []
     for attr, weight in kwargs.items():
-        values = [float(getattr(item, attr)) for item in items]
+        try:
+            values = [float(getattr(item, attr).scalar.value) for item in items]
+        except:
+            pass
         try:
             s = sum(values)
             scaled.append([weight * (v / s) for v in values])

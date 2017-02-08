@@ -4,9 +4,9 @@ import os
 
 import pytest
 from mentor .messages import PythonTask
-from mentor.messages.base import (CommandInfo, ContainerInfo, Cpus, Disk,
-                                  Mem, TaskID, TaskInfo)
-from malefico.scheduler import MesosSchedulerDriver
+from mentor.messages import (Cpus, Disk,
+                                  Mem, TaskInfo,Message)
+from mentos.scheduler import SchedulerDriver
 from mentor.scheduler import QueueScheduler
 from mentor.utils import RemoteException
 
@@ -14,27 +14,27 @@ from mentor.utils import RemoteException
 @pytest.fixture
 def command():
     task = TaskInfo(name='test-task',
-                    id=TaskID(value='test-task-id'),
+                    task_id=Message(value='test-task-id'),
                     resources=[Cpus(0.1), Mem(64)],
-                    command=CommandInfo(value='echo 100'))
+                    command=Message(value='echo 100'))
     return task
 
 
 @pytest.fixture
 def docker_command():
     task = TaskInfo(name='test-docker-task',
-                    id=TaskID(value='test-docker-task-id'),
+                    task_id=Message(value='test-docker-task-id'),
                     resources=[Cpus(0.1), Mem(64)],
-                    command=CommandInfo(value='echo 100'),
-                    container=ContainerInfo(
+                    command=Message(value='echo 100'),
+                    container=Message(
                         type='DOCKER',
-                        docker=ContainerInfo.DockerInfo(image='alpine')))
+                        docker=Message(image='alpine')))
     return task
 
 
 @pytest.fixture
 def docker_python():
-    task = PythonTask(id=TaskID(value='test-python-task-id'),
+    task = PythonTask(task_id=Message(value='test-python-task-id'),
                       fn=sum, args=[range(5)],
                       name='test-python-task-name',
                       resources=[Cpus(0.1), Mem(64), Disk(0)])
@@ -45,7 +45,7 @@ def test_command(mocker, command):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
-    with MesosSchedulerDriver(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler'):
         sched.submit(command)
         sched.wait()  # block until all tasks finishes
 
@@ -67,7 +67,7 @@ def test_docker_command(mocker, docker_command):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
-    with MesosSchedulerDriver(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler'):
         sched.submit(docker_command)
         import time
         time.sleep(5)
@@ -89,7 +89,7 @@ def test_docker_python(mocker, docker_python):
     sched = QueueScheduler()
     mocker.spy(sched, 'on_update')
 
-    with MesosSchedulerDriver(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler'):
         sched.submit(docker_python)
         sched.wait()  # block until all tasks finishes
 
@@ -111,11 +111,11 @@ def test_docker_python_exception():
     def error():
         raise TypeError('Dummy exception on executor side!')
 
-    task = PythonTask(id=TaskID(value='test-python-task-id'),
+    task = PythonTask(task_id=Message(value='test-python-task-id'),
                       fn=error, name='test-python-task-name',
                       resources=[Cpus(0.1), Mem(64), Disk(0)])
 
-    with MesosSchedulerDriver(sched, name='test-scheduler'):
+    with SchedulerDriver(sched, name='test-scheduler'):
         sched.submit(task)
         sched.wait()
         assert task.status.has_failed()
@@ -130,7 +130,7 @@ def test_parallel_execution(mocker, docker_python):
     with SchedulerDriver(sched, name='test-scheduler'):
         tasks = []
         for i in range(3):
-            task = PythonTask(id=TaskID(value='test-python-task-{}'.format(i)),
+            task = PythonTask(task_id=Message(value='test-python-task-{}'.format(i)),
                               fn=sum, args=[[1, 10, i]],
                               name='test-python-task-name',
                               resources=[Cpus(0.1), Mem(64), Disk(0)])
@@ -148,7 +148,7 @@ def test_sequential_execution(mocker, docker_python):
     with SchedulerDriver(sched, name='test-scheduler'):
         tasks = []
         for i in range(3):
-            task = PythonTask(id=TaskID(value='test-python-task-{}'.format(i)),
+            task = PythonTask(task_id=Message(value='test-python-task-{}'.format(i)),
                               fn=sum, args=[[1, 10, i]],
                               name='test-python-task-name',
                               resources=[Cpus(0.1), Mem(64), Disk(0)])
@@ -174,15 +174,15 @@ def test_same_executor(mocker, docker_python):
         sleep(5)
         return sum(x)
 
-    task1 = PythonTask(id=TaskID(value='t1'),
+    task1 = PythonTask(task_id=Message(value='t1'),
                        fn=sleepsum, args=[range(10)],
                        name='t1',
                        resources=[Cpus(0.1), Mem(64), Disk(0)])
-    task2 = PythonTask(id=TaskID(value='t2'),
+    task2 = PythonTask(task_id=Message(value='t2'),
                        fn=sleepsum, args=[range(100)],
                        name='t2',
                        resources=[Cpus(0.1), Mem(128), Disk(0)])
-    task3 = PythonTask(id=TaskID(value='t3'),
+    task3 = PythonTask(task_id=Message(value='t3'),
                        fn=sleepsum, args=[range(1000)],
                        name='t3',
                        resources=[Cpus(0.1), Mem(256), Disk(0)])

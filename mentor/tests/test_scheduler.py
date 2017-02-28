@@ -128,7 +128,7 @@ def test_scheduler_retries(mocker):
     #states = ['TASK_STARTING', 'TASK_FAILED', 'TASK_FAILED']
     states = ['TASK_FAILED', 'TASK_FAILED', 'TASK_FAILED']
     for ((args, kwargs), state) in zip(sched.on_update.call_args_list, states):
-        assert args[1].state == state
+        assert args[1]["state"] == state
 
 
 def test_scheduler_constraints(mocker):

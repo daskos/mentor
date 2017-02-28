@@ -10,7 +10,7 @@ from functools import partial
 from mentor.constraint import pour
 from mentos.interface import Scheduler
 from mentor.placement import bfd
-from mentor.messages import  TaskInfo,Offer,Message
+from mentor.messages import  TaskInfo,Offer,Message,transform,TaskStatus,PythonTaskStatus
 from mentos.scheduler import SchedulerDriver
 from mentor.utils import Interruptable, timeout
 
@@ -59,8 +59,8 @@ class Framework(Scheduler):
         assert isinstance(task, TaskInfo)
         self.tasks[task.task_id.value] = task
 
+    @transform(repeat=True,offers=Offer)
     def on_offers(self, driver, offers):
-        offers = [Offer(f) for f in offers]
         log.info('Received offers: {}'.format(sum(offers)))
         self.report()
 
@@ -90,8 +90,8 @@ class Framework(Scheduler):
             except Exception as ex:
                 log.exception('Exception occured during task launch!')
 
+    @transform(repeat=False, status=PythonTaskStatus)
     def on_update(self, driver, status):
-        #status = Message(**status)
         task = self.tasks[status.task_id.value]
         log.info('Updated task {} state to {}'.format(status.task_id,
                                                       status.state))

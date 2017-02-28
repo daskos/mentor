@@ -6,31 +6,25 @@ from .utils import remote_exception
 import logging
 from uuid import uuid4
 from mentos.utils import decode_data,encode_data
+from functools import wraps
+from six import iteritems,iterkeys,get_function_code
+
 log = logging.getLogger(__name__)
 
 logging.getLogger().setLevel(logging.DEBUG)
-# u('string') replaces the forwards-incompatible u'string'
-if six.PY3:
-    def u(string):
-        return string
-else:
-    import codecs
 
-    def u(string):
-        return codecs.unicode_escape_decode(string)[0]
 
-# dict.iteritems(), dict.iterkeys() is also incompatible
-if six.PY3:
-    iteritems = dict.items
-    iterkeys = dict.keys
-else:
-    iteritems = dict.iteritems
-    iterkeys = dict.iterkeys
 
-def bunchify(x):
+def decode_message(x):
     """ Recursively transforms a dictionary into a Message via copy.
 
     """
+    if isinstance(x, dict):
+        return Message((k, decode_message(v)) for k, v in iteritems(x))
+    elif isinstance(x, (list, tuple)):
+        return type(x)(decode_message(v) for v in x)
+    else:
+        return x
 
 
 class Message(dict):
@@ -108,6 +102,10 @@ class Message(dict):
 
     def __dir__(self):
         return self.keys()
+
+    @staticmethod
+    def fromDict(d):
+        return decode_message(d)
 
 def Cpus(value):
     return Message({'name': 'cpus', 'role': '*', 'scalar': Message({'value':value}), 'type': 'SCALAR'})
@@ -236,7 +234,9 @@ class ResourceMixin(object):
 
 
 class TaskInfo(ResourceMixin, Message):
-    pass
+    @staticmethod
+    def fromDict(d):
+        return TaskInfo(**decode_message(d))
 
 
 
@@ -255,25 +255,12 @@ class Offer(ResourceMixin, Message):
         except KeyError:
             return self["slave_id"]
 
+    @staticmethod
+    def fromDict(d):
+        return Offer(**decode_message(d))
 
 
-class PythonTaskStatus(Message):
-
-    def __init__(self, data=None, **kwargs):
-        super(PythonTaskStatus, self).__init__(**kwargs)
-        self.labels = Message(labels=Message(key='python'))
-        self.data = encode_data(cloudpickle.dumps(data))
-
-    @property
-    def result(self):
-        return cloudpickle.loads(decode_data(self["data"]))
-
-    @property
-    def exception(self):
-        try:
-            return remote_exception(*self.data)
-        except:
-            return None
+class TaskStatus(Message):
 
     def is_staging(self):
         return self.state == 'TASK_STAGING'
@@ -300,6 +287,33 @@ class PythonTaskStatus(Message):
     def has_terminated(self):
         return self.has_succeeded() or self.has_failed()
 
+
+class PythonTaskStatus(TaskStatus):
+
+    def __init__(self, data=None, **kwargs):
+
+        self.labels = Message(labels=[Message(key='python')])
+        self.data = encode_data(cloudpickle.dumps(kwargs.get("data",None)))
+
+        super(PythonTaskStatus, self).__init__(**kwargs)
+
+    @property
+    def result(self):
+        return cloudpickle.loads(decode_data(self["data"]))
+
+    @property
+    def exception(self):
+        try:
+            return remote_exception(*self.result)
+        except:
+            return None
+
+
+
+    @staticmethod
+    def fromDict(d):
+        return PythonTaskStatus(**decode_message(d))
+
 # TODO create custom messages per executor
 class PythonTask(TaskInfo):
 
@@ -316,25 +330,11 @@ class PythonTask(TaskInfo):
         self.retries = retries
         self.attempt = 1
 
-        self.labels = Message(labels=Message(key='python'))
+        self.labels = Message(labels=[Message(key='python')])
 
     def __call__(self):
         fn, args, kwargs = cloudpickle.loads(decode_data(self.data))
         return fn(*args, **kwargs)
-
-    def retry(self, status):
-        if self.attempt < self.retries:
-            log.info('Task {} attempt #{} rescheduled due to failure with state '
-                         '{} and message {}'.format(self.task_id, self.attempt,
-                                                    status.state, status.message))
-            self.attempt += 1
-            status.state = 'TASK_STAGING'
-        else:
-            log.error('Aborting due to task {} failed for {} attempts in state '
-                          '{} with message {}'.format(self.task_id, self.retries,
-                                                      status.state, status.message))
-            raise RuntimeError('Task {} failed with state {} and message {}'.format(
-                self.task_id, status.state, status.message))
 
     def update(self, status):
         self.on_update(status)
@@ -355,15 +355,6 @@ class PythonTask(TaskInfo):
         log.error('Task {} has been failed with state {} due to {}'.format(
             self.task_id.value, status.state, status.message))
 
-        try:
-            raise status.exception  # won't retry due to code error in PythonTaskStatus
-        except KeyError as e:
-            # not a code error, e.g. problem during deployment
-            self.retry(status)
-        else:
-            log.error('Aborting due to task {} failed with state {} and message '
-                          '{}'.format(self.task_id, status.state, status.message))
-
 
 class PythonExecutor(Message):
 
@@ -373,7 +364,7 @@ class PythonExecutor(Message):
                  envs={}, uris=[], **kwds):
         super(PythonExecutor, self).__init__(**kwds)
         self.container = Message(
-            type='MESOS',
+            type='DOCKER',
             mesos=Message(
                 image=Message(type='DOCKER',
                             docker=Message(name=docker))))
@@ -385,7 +376,7 @@ class PythonExecutor(Message):
         self.envs = envs
         self.uris = uris
 
-        self.labels = Message(labels=Message(key='python'))
+        self.labels = Message(labels=[Message(key='python')])
 
     @property
     def docker(self):
@@ -421,3 +412,29 @@ class PythonExecutor(Message):
     def envs(self, value):
         envs = [{'name': k, 'value': v} for k, v in value.items()]
         self.command.environment = Message(variables=envs)
+
+
+
+
+def transform(repeat=False,**trigger):
+    def decorator(func):
+        names = getattr(func,'_names',None)
+        if names is None:
+            code = get_function_code(func)
+            names = code.co_varnames[:code.co_argcount]
+        @wraps(func)
+        def decorated(*args,**kwargs):
+            all_args = kwargs.copy()
+            for n,v in zip(names,args):
+                all_args[n] = v
+            for k,v in trigger.items():
+                if k in all_args:
+                    if repeat:
+                        all_args[k] = [v.fromDict(arg) for arg in all_args[k]]
+                    else:
+                        all_args[k] = v.fromDict(all_args[k])
+            return func(**all_args)
+        decorated._names = names
+        return decorated
+    return decorator
+

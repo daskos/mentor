@@ -6,18 +6,16 @@ import time
 from collections import Counter
 from functools import partial
 
-
-from mentor.constraint import pour
-from mentos.interface import Scheduler
-from mentor.placement import bfd
-from mentor.messages import  TaskInfo,Offer,Message,transform,TaskStatus,PythonTaskStatus
 from mentos.scheduler import SchedulerDriver
-from mentor.utils import Interruptable, timeout
+from mentos.interface import Scheduler
+from .constraint import pour
+from .placement import bfd
+from .messages import  TaskInfo,Offer,Message,transform,TaskStatus,PythonTaskStatus
+from .utils import Interruptable, timeout
 
 log = logging.getLogger(__name__)
 
 # TODO reuse the same type of executors
-
 
 class Framework(Scheduler):
 

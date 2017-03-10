@@ -6,7 +6,6 @@ from .scheduler import QueueScheduler, SchedulerDriver
 from .executor import ThreadExecutor, ProcessExecutor, ExecutorDriver
 from .messages import PythonTask, PythonTaskStatus
 
-
 __version__ = _pkg_resources.get_distribution('mentor').version
 
 __all__ = ('QueueScheduler',

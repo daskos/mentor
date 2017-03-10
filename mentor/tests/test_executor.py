@@ -67,7 +67,6 @@ def test_failed_status_updates(mocker):
     assert status.state == 'TASK_FAILED'
     assert isinstance(status.data, tuple)
     assert isinstance(status.exception, RemoteException)
-
     assert status.message == "Exception('Booom!',)"
 
 

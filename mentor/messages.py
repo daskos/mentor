@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 logging.getLogger().setLevel(logging.DEBUG)
 
 
-
 def decode_message(x):
     """ Recursively transforms a dictionary into a Message via copy.
 
@@ -308,8 +307,6 @@ class PythonTaskStatus(TaskStatus):
         except:
             return None
 
-
-
     @staticmethod
     def fromDict(d):
         return PythonTaskStatus(**decode_message(d))
@@ -317,7 +314,6 @@ class PythonTaskStatus(TaskStatus):
 # TODO create custom messages per executor
 class PythonTask(TaskInfo):
 
-     
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  executor=None, retries=3, **kwds):
@@ -329,7 +325,6 @@ class PythonTask(TaskInfo):
         self.resources = resources
         self.retries = retries
         self.attempt = 1
-
         self.labels = Message(labels=[Message(key='python')])
 
     def __call__(self):
@@ -357,8 +352,6 @@ class PythonTask(TaskInfo):
 
 
 class PythonExecutor(Message):
-
- 
 
     def __init__(self, id, docker='satyr', force_pull=False,
                  envs={}, uris=[], **kwds):
@@ -414,8 +407,6 @@ class PythonExecutor(Message):
         self.command.environment = Message(variables=envs)
 
 
-
-
 def transform(repeat=False,**trigger):
     def decorator(func):
         names = getattr(func,'_names',None)
@@ -437,4 +428,3 @@ def transform(repeat=False,**trigger):
         decorated._names = names
         return decorated
     return decorator
-

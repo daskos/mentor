@@ -66,9 +66,9 @@ def test_future_catches_exception(resources):
 
     with MesosPoolExecutor(name='futures-pool') as executor:
         future = executor.submit(raiser)
-        e = future.exception(timeout=30)
-        assert isinstance(e, RemoteException)
-        assert isinstance(e, TypeError)
+        exc = future.exception(timeout=30)
+        assert isinstance(exc, RemoteException)
+        assert isinstance(exc, TypeError)
 
 
 def test_multiple_submit(resources):

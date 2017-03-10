@@ -164,6 +164,3 @@ def test_json():
 
     assert o1 == Offer(json.loads(json.dumps(o1)))
     assert t1 == TaskInfo(json.loads(json.dumps(t1)))
-
-
-

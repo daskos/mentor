@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 
 import pytest
-from mentor .messages import PythonTask
+from mentor.messages import PythonTask
 from mentor.messages import (Cpus, Disk,
                                   Mem, TaskInfo,Message)
 from mentos.scheduler import SchedulerDriver
@@ -59,7 +59,6 @@ def test_command(mocker, command):
     args, kwargs = calls[1]
     assert args[1].task_id.value == 'test-task-id'
     assert args[1].state == 'TASK_FINISHED'
-
 
 @pytest.mark.skipif(not os.environ.get('DOCKER_CONTAINERIZER_ENABLED', False),
                     reason='docker containerizer is disabled in ci setup')

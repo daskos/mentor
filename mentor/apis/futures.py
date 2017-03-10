@@ -5,8 +5,9 @@ import time
 # TODO: change thrown errors to these
 from concurrent.futures import ALL_COMPLETED, CancelledError, TimeoutError
 
-from ..messages import PythonTask
-from ..scheduler import QueueScheduler, Running
+from ..messages import Cpus, Disk, Mem, PythonExecutor, PythonTask
+from ..scheduler import Framework
+from ..core.scheduler import SchedulerDriver
 from ..utils import timeout as seconds
 
 __all__ = ('MesosPoolExecutor',
@@ -52,7 +53,6 @@ class Future(object):
                 return self.status.data
             else:
                 try:
-                    print(self.status.data)
                     raise self.status.exception
                 except TypeError:
                     raise ValueError(
@@ -71,17 +71,21 @@ class Future(object):
         raise NotImplementedError()
 
 
-class MesosPoolExecutor(Running):
+class MesosPoolExecutor(SchedulerDriver):
 
     def __init__(self, max_workers=-1, *args, **kwargs):
         self.max_worker = max_workers  # TODO
-        self.scheduler = QueueScheduler()
+        self.scheduler = Framework()
         super(MesosPoolExecutor, self).__init__(
             self.scheduler, *args, **kwargs)
 
-    def submit(self, fn, args=[], kwargs={}, **kwds):
-        task = PythonTask(fn=fn, args=args, kwargs=kwargs,
-                          name=kwds.pop('name', 'futures'), **kwds)
+    def submit(self, fn, args=[], kwargs={}, name='futures',
+               docker='mentor', force_pull=False, envs={}, uris=[],
+               resources=[Cpus(0.1), Mem(128), Disk(0)], **kwds):
+        executor = PythonExecutor(docker=docker, force_pull=force_pull,
+                                  envs=envs, uris=uris)
+        task = PythonTask(name=name, fn=fn, args=args, kwargs=kwargs,
+                          resources=resources, executor=executor, **kwds)
         self.scheduler.submit(task)
         return Future(task)
 

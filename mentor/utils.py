@@ -4,6 +4,16 @@ import signal
 from contextlib import contextmanager
 
 
+def partition(pred, iterable):
+    trues, falses = [], []
+    for item in iterable:
+        if pred(item):
+            trues.append(item)
+        else:
+            falses.append(item)
+    return trues, falses
+
+
 class TimeoutError(Exception):
     pass
 
@@ -24,9 +34,69 @@ def timeout(seconds):
         yield
 
 
+class SignalHandler(object):
+
+    def __init__(self, handler, signals=(signal.SIGINT, signal.SIGTERM)):
+        self.handler = handler
+        self.signals = signals
+        self.original_handlers = {}
+
+    def register(self):
+        def signal_handler(signum, frame):
+            self.release()
+            self.handler()
+
+        self.released = False
+        for sig in self.signals:
+            self.original_handlers[sig] = signal.getsignal(sig)
+            signal.signal(sig, signal_handler)
+
+    def release(self):
+        if self.released:
+            return False
+
+        for sig in self.signals:
+            signal.signal(sig, self.original_handlers[sig])
+
+        self.released = True
+        return True
+
+    def __enter__(self):
+        self.register()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.release()
+        if exc_type:
+            raise (exc_type, exc_value, traceback)
+
+
+class Interruptable(object):
+
+    def __init__(self):
+        self.signal_handler = SignalHandler(self.stop)
+
+    def start(self):
+        self.signal_handler.register()
+        return super(Interruptable, self).stop()
+
+    def stop(self):
+        self.signal_handler.release()
+        return super(Interruptable, self).stop()
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.stop()
+        self.join()
+        if exc_type:
+            raise (exc_type, exc_value, traceback)
+
+
 class RemoteException(Exception):
     """ Remote Exception
-
     Contains the exception and traceback from a remotely run task
      - Include the original error message
      - Respond to try-except blocks with original error type

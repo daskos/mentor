@@ -72,7 +72,7 @@ def test_queue_apply_async(zk, resources):
     results = [cp.loads(queue.get()) for i in range(4)]
     assert sorted(results) == range(4)
 
-    
+
 def test_map_async(resources):
     with Pool(name='test-pool') as pool:
         results = pool.map_async(

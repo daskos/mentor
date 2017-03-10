@@ -1,0 +1,61 @@
+language: python
+dist: trusty
+sudo: required
+notifications:
+  email: false
+services:
+- docker
+matrix:
+  include:
+  - python: '2.7'
+    env: OS=ubuntu-14.04
+  - python: '3.5'
+    env: OS=ubuntu-14.04
+  - python: '3.6'
+    env: OS=ubuntu-14.04
+env:
+  global:
+  - DOCKER_COMPOSE_VERSION=1.6.2
+before_install:
+- pwd
+- bash ci/scripts/travis_docker_setup.sh
+- docker version
+- docker-compose version
+- export DOCKER_IP=127.0.0.1
+- docker-compose up -d
+- docker ps -a
+- docker images
+- sudo apt-get install pandoc
+- pip install pypandoc
+install:
+- which python
+script:
+- python setup.py test
+after_success:
+- pip install coveralls
+- coveralls
+before_deploy:
+- pip install pypandoc
+deploy:
+  - provider: pypi
+    distributions: "sdist bdist_wheel"
+    server: https://testpypi.python.org/pypi
+    user: daskos
+    password:
+      secure: K7Ic/pSDVhqY63iSatOpXig77WnMhIiRgU+zZKhAJHxwGFAbq4b4QfIxD8xKR4GwLm/vGpX285cKp1nuleAwLRj4GpOmVU2o1exZHO0HNFTpSsb9fb+lYWQIFB9WFdueiv/V0WmxR6sR2+iDGCy2itTg5pNuu2POr0olJga3ixsoS1EaxRQW4DOXciblTHBRZIPNQVMi823iacq7ovvJ/ZmSBDf6KOEbouqGSMYsbgywFRpqnTKDMYgU60Mov/ATkXNMkUye6ffIKJbr/UhhVgpnkhcRBAa0Hx2/BfA23CokiBFAusH3p8Ko8BMfUCnkZ8pJw2SJ/kXqeMn+SLMX6YqsAIYQSRE33mDtDJkK5XHP/MY3/soO3M+fPGtz3vIUmPB6ycH8INw+R0FUKnblGgRoNbmGF+MbrfnRXe5Qo09dUil859ySbIYfkYkadBbtn7MNEtbp6anaAJgYnBAQkWimT+uslEKM1AVqKQ/MvW+xBzmOkz3oZIFQsqkQS4O0vT/SlH2V1GMDfXG/R8heozMYNWSCLZM4PfocZY0GZIL1qEJV+z0Q3DwwqghHZ/2v+MR35r7iTPPd0Wf+LfK762IplM4/Va+nQ8DCbI5ZF7fO5OUUCgpZpaEGKLb8yHJqfiwZ42qzVtkJkobeyBkzyQmBzxe/zBE9US8cD7R0O6E=
+    on:
+      branch: master
+      tags: false
+      condition: $TRAVIS_PYTHON_VERSION = "2.7"
+  - provider: pypi
+    distributions: "sdist bdist_wheel"
+    user: daskos
+    password:
+      secure: K7Ic/pSDVhqY63iSatOpXig77WnMhIiRgU+zZKhAJHxwGFAbq4b4QfIxD8xKR4GwLm/vGpX285cKp1nuleAwLRj4GpOmVU2o1exZHO0HNFTpSsb9fb+lYWQIFB9WFdueiv/V0WmxR6sR2+iDGCy2itTg5pNuu2POr0olJga3ixsoS1EaxRQW4DOXciblTHBRZIPNQVMi823iacq7ovvJ/ZmSBDf6KOEbouqGSMYsbgywFRpqnTKDMYgU60Mov/ATkXNMkUye6ffIKJbr/UhhVgpnkhcRBAa0Hx2/BfA23CokiBFAusH3p8Ko8BMfUCnkZ8pJw2SJ/kXqeMn+SLMX6YqsAIYQSRE33mDtDJkK5XHP/MY3/soO3M+fPGtz3vIUmPB6ycH8INw+R0FUKnblGgRoNbmGF+MbrfnRXe5Qo09dUil859ySbIYfkYkadBbtn7MNEtbp6anaAJgYnBAQkWimT+uslEKM1AVqKQ/MvW+xBzmOkz3oZIFQsqkQS4O0vT/SlH2V1GMDfXG/R8heozMYNWSCLZM4PfocZY0GZIL1qEJV+z0Q3DwwqghHZ/2v+MR35r7iTPPd0Wf+LfK762IplM4/Va+nQ8DCbI5ZF7fO5OUUCgpZpaEGKLb8yHJqfiwZ42qzVtkJkobeyBkzyQmBzxe/zBE9US8cD7R0O6E=
+    on:
+      tags: true
+      repo: daskos/mentor
+      condition: $TRAVIS_PYTHON_VERSION = "2.7"
+
+
+

@@ -1,17 +1,20 @@
 from __future__ import absolute_import, division, print_function
 
-from mentor.executor import OneOffExecutor, Running
+from mentos.executor import ExecutorDriver
+from mentor.executor import ThreadExecutor
 from mentor.messages import PythonTask, PythonTaskStatus
 from mentor.utils import RemoteException
 
 
 class FakeThread(object):
 
-    def __init__(self, target):
+    def __init__(self, target, args=(), kwargs={}):
         self.target = target
+        self.args = args
+        self.kwargs = kwargs
 
     def start(self):
-        return self.target()
+        return self.target(*self.args, **self.kwargs)
 
 
 def test_finished_status_updates(mocker):
@@ -20,7 +23,7 @@ def test_finished_status_updates(mocker):
     driver = mocker.Mock()
     task = PythonTask(fn=sum, args=[range(5)])
 
-    executor = OneOffExecutor()
+    executor = ThreadExecutor()
     executor.on_launch(driver, task)
 
     calls = driver.update.call_args_list
@@ -47,7 +50,7 @@ def test_failed_status_updates(mocker):
     driver = mocker.Mock()
     task = PythonTask(fn=failing_function, args=['arbitrary', 'args'])
 
-    executor = OneOffExecutor()
+    executor = ThreadExecutor()
     executor.on_launch(driver, task)
 
     calls = driver.update.call_args_list
@@ -64,8 +67,7 @@ def test_failed_status_updates(mocker):
     assert status.state == 'TASK_FAILED'
     assert isinstance(status.data, tuple)
     assert isinstance(status.exception, RemoteException)
-
-    assert status.message == 'Booom!'
+    assert status.message == "Exception('Booom!',)"
 
 
 # def test_runner_context_manager():

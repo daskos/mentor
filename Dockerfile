@@ -1,5 +1,5 @@
-FROM lensa/mesos-python:0.27.0-py2.7-python-2.7
+FROM python:3.5.2-alpine
 
-ADD . /satyr
-WORKDIR /satyr
+ADD . /mentor
+WORKDIR /mentor
 RUN pip install .

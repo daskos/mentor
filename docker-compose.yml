@@ -1,0 +1,70 @@
+version: '2'
+services:
+  zookeeper:
+    network_mode: "host"
+    image: bobrik/zookeeper:latest
+    environment:
+      - ZK_CONFIG=tickTime=2000,initLimit=10,syncLimit=5,maxClientCnxns=128,forceSync=no,clientPort=2181
+      - ZK_ID=1
+  mesos_master_0:
+    network_mode: "host"
+    image: mesosphere/mesos-master:1.1.0-2.0.107.ubuntu1404
+    environment:
+      - MESOS_LOGGING_LEVEL=ERROR
+      - MESOS_IP=127.0.0.1
+      - MESOS_HOSTNAME=localhost
+      - MESOS_ZK=zk://127.0.0.1:2181/mesos
+      - MESOS_QUORUM=1
+      - MESOS_CLUSTER=test
+      - MESOS_REGISTRY=in_memory
+    restart: "always"
+  mesos_master_1:
+    network_mode: "host"
+    image: mesosphere/mesos-master:1.1.0-2.0.107.ubuntu1404
+    environment:
+      - MESOS_LOGGING_LEVEL=ERROR
+      - MESOS_IP=127.0.0.1
+      - MESOS_HOSTNAME=localhost
+      - MESOS_ZK=zk://127.0.0.1:2181/mesos
+      - MESOS_QUORUM=1
+      - MESOS_CLUSTER=test
+      - MESOS_REGISTRY=in_memory
+      - MESOS_PORT=6060
+    restart: "always"
+  mesos_slave_0:
+    network_mode: "host"
+    image: mesosphere/mesos-slave:1.1.0-2.0.107.ubuntu1404
+    environment:
+      - MESOS_LOGGING_LEVEL=ERROR
+      - MESOS_IP=127.0.0.1
+      - MESOS_MASTER=zk://127.0.0.1:2181/mesos
+      - MESOS_CONTAINERIZERS=mesos
+      - MESOS_IMAGE_PROVIDERS=docker
+      - MESOS_ISOLATION=cgroups/cpu,cgroups/mem,docker/runtime
+      # - MESOS_DOCKER_REGISTRY=http://localhost:5000
+      - MESOS_PORT=5052
+      - MESOS_RESOURCES=cpus(*):0.5;mem(*):1024;ports(*):[11000-11999]
+      - MESOS_WORK_DIR=/tmp/mesos1
+      - MESOS_ATTRIBUTES=mentos:true
+      ## To speed up provisioning images, default is copy
+      # MESOS_IMAGE_PROVISIONER_BACKEND=aufs
+      ## To enable docker containerizer too`
+      - MESOS_CONTAINERIZERS=mesos,docker
+      - MESOS_SWITCH_USER=0
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    #   ## To cache docker downloaded images
+      - /tmp/mesos/store/docker:/tmp/mesos/store/docker
+    #   ## To enable docker containerizer
+      - /usr/bin/docker:/usr/local/bin/docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /cgroup:/cgroup
+      - /sys:/sys
+
+    privileged: true
+#  marathon:
+#    network_mode: "host"
+#    image: mesosphere/marathon:v1.3.7
+#    command: --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon
+#    restart: "always"
+#

@@ -2,7 +2,6 @@
 [![Join the chat at https://gitter.im/daskos/mentor](https://badges.gitter.im/daskos/mentor.svg)](https://gitter.im/daskos/mentor?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Coding Hours](https://api.gitential.com/accounts/6/projects/117/badges/coding-hours.svg)](https://gitential.com/accounts/6/projects/117/share?uuid=5f7ccc86-a18c-4f68-bd6d-22cdf0686657&utm_source=shield&utm_medium=shield&utm_campaign=117)
 
-![mentor](https://s3.amazonaws.com/daskos-rnd-misc/mentor2.png)
 
 # An extensible Mesos library for Python
 ###### aka. the distributed snake-charmer
